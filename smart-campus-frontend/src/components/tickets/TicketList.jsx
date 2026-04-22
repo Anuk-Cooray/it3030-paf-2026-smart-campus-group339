@@ -86,6 +86,19 @@ export default function TicketList({ refreshTrigger }) {
 
               <p style={styles.description}>{ticket.description}</p>
 
+              {ticket.attachments?.length > 0 && (
+                <div style={styles.attachmentsSection}>
+                  {ticket.attachments.map((attachment, index) => (
+                    <img
+                      key={`${ticket.id}-att-${index}`}
+                      src={attachment}
+                      alt={`Ticket evidence ${index + 1}`}
+                      style={styles.attachmentImage}
+                    />
+                  ))}
+                </div>
+              )}
+
               <div style={styles.meta}>
                 <span style={styles.category}>{ticket.category}</span>
                 <span style={styles.status}>{ticket.status}</span>
@@ -186,6 +199,20 @@ const styles = {
     color: '#4b5563',
     fontSize: 14,
     lineHeight: 1.5,
+  },
+  attachmentsSection: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 8,
+    marginBottom: 12,
+  },
+  attachmentImage: {
+    width: '100%',
+    height: 84,
+    objectFit: 'cover',
+    borderRadius: 6,
+    border: '1px solid #d1d5db',
+    background: '#f3f4f6',
   },
   meta: {
     display: 'flex',

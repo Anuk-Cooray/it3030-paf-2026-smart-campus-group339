@@ -7,6 +7,7 @@ import com.example.demo.model.User;
 import com.example.demo.repository.TicketRepository;
 import com.example.demo.repository.UserRepository;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,13 @@ public class TicketController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
+        List<String> attachments;
+        try {
+            attachments = sanitizeAttachments(createTicketDto.attachments());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
         Ticket ticket = new Ticket();
         ticket.setUser(user);
         ticket.setResource(createTicketDto.resource());
@@ -51,6 +59,9 @@ public class TicketController {
         ticket.setDescription(createTicketDto.description());
         ticket.setPriority(createTicketDto.priority());
         ticket.setContactDetails(createTicketDto.contactDetails());
+        ticket.setAttachment1(attachments.size() > 0 ? attachments.get(0) : null);
+        ticket.setAttachment2(attachments.size() > 1 ? attachments.get(1) : null);
+        ticket.setAttachment3(attachments.size() > 2 ? attachments.get(2) : null);
         ticket.setStatus("OPEN");
         ticket.setCreatedAt(LocalDateTime.now());
         ticket.setUpdatedAt(LocalDateTime.now());
@@ -133,6 +144,17 @@ public class TicketController {
     }
 
     private static TicketDto toDto(Ticket ticket) {
+        List<String> attachments = new ArrayList<>();
+        if (ticket.getAttachment1() != null && !ticket.getAttachment1().isBlank()) {
+            attachments.add(ticket.getAttachment1());
+        }
+        if (ticket.getAttachment2() != null && !ticket.getAttachment2().isBlank()) {
+            attachments.add(ticket.getAttachment2());
+        }
+        if (ticket.getAttachment3() != null && !ticket.getAttachment3().isBlank()) {
+            attachments.add(ticket.getAttachment3());
+        }
+
         return new TicketDto(
                 ticket.getId(),
                 ticket.getResource(),
@@ -141,10 +163,36 @@ public class TicketController {
                 ticket.getDescription(),
                 ticket.getPriority(),
                 ticket.getContactDetails(),
+                attachments,
                 ticket.getStatus(),
                 ticket.getUser().getName(),
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt());
+    }
+
+    private static List<String> sanitizeAttachments(List<String> attachments) {
+        if (attachments == null) {
+            return List.of();
+        }
+        if (attachments.size() > 3) {
+            throw new IllegalArgumentException("Maximum 3 attachments allowed");
+        }
+
+        List<String> cleaned = new ArrayList<>();
+        for (String attachment : attachments) {
+            if (attachment == null || attachment.isBlank()) {
+                continue;
+            }
+            if (!attachment.startsWith("data:image/")) {
+                throw new IllegalArgumentException("Only image attachments are allowed");
+            }
+            cleaned.add(attachment);
+        }
+
+        if (cleaned.size() > 3) {
+            throw new IllegalArgumentException("Maximum 3 attachments allowed");
+        }
+        return cleaned;
     }
 
     public record StatusUpdateDto(String status) {}

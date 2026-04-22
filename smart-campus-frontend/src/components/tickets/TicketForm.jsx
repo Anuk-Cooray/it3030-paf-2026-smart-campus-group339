@@ -8,6 +8,7 @@ const INITIAL_FORM_DATA = {
   description: '',
   priority: 'medium',
   contactDetails: '',
+  attachments: [],
 }
 
 const CATEGORY_OPTIONS = [
@@ -34,6 +35,7 @@ export default function TicketForm({ onTicketCreated }) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
   const [focused, setFocused] = useState(null)
+  const [attachmentError, setAttachmentError] = useState('')
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -46,6 +48,54 @@ export default function TicketForm({ onTicketCreated }) {
 
   const handleBlur = () => {
     setFocused(null)
+  }
+
+  const readFileAsDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(new Error(`Failed to read ${file.name}`))
+      reader.readAsDataURL(file)
+    })
+
+  const handleAttachmentChange = async (e) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) {
+      return
+    }
+
+    setAttachmentError('')
+
+    const hasInvalidType = files.some((file) => !file.type.startsWith('image/'))
+    if (hasInvalidType) {
+      setAttachmentError('Only image files are allowed.')
+      return
+    }
+
+    const nextCount = formData.attachments.length + files.length
+    if (nextCount > 3) {
+      setAttachmentError('You can attach up to 3 images only.')
+      return
+    }
+
+    try {
+      const encodedFiles = await Promise.all(files.map((file) => readFileAsDataUrl(file)))
+      setFormData((prev) => ({
+        ...prev,
+        attachments: [...prev.attachments, ...encodedFiles],
+      }))
+      e.target.value = ''
+    } catch {
+      setAttachmentError('Failed to process image attachment. Please try again.')
+    }
+  }
+
+  const removeAttachment = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index),
+    }))
+    setAttachmentError('')
   }
 
   const handleSubmit = async (e) => {
@@ -252,6 +302,39 @@ export default function TicketForm({ onTicketCreated }) {
             />
             <small style={styles.helperText}>Used only for maintenance updates.</small>
           </div>
+
+          <div style={styles.attachmentGroup}>
+            <label style={styles.label}>Image Attachments (up to 3)</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleAttachmentChange}
+              disabled={formData.attachments.length >= 3}
+              style={styles.fileInput}
+            />
+            <small style={styles.helperText}>
+              Upload evidence photos such as damaged equipment or error screens.
+            </small>
+            {attachmentError && <small style={styles.attachmentError}>{attachmentError}</small>}
+
+            {formData.attachments.length > 0 && (
+              <div style={styles.attachmentGrid}>
+                {formData.attachments.map((attachment, index) => (
+                  <div key={index} style={styles.attachmentItem}>
+                    <img src={attachment} alt={`Attachment ${index + 1}`} style={styles.attachmentImage} />
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      style={styles.removeAttachmentButton}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={styles.buttonGroup}>
@@ -433,6 +516,57 @@ const styles = {
     marginTop: 5,
     fontSize: 11,
     color: '#64748b',
+  },
+  attachmentGroup: {
+    marginTop: 14,
+    borderTop: '1px solid #dbeafe',
+    paddingTop: 12,
+  },
+  fileInput: {
+    width: '100%',
+    boxSizing: 'border-box',
+    background: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: 8,
+    padding: '8px 10px',
+    fontSize: 12,
+    color: '#0f172a',
+  },
+  attachmentError: {
+    display: 'block',
+    marginTop: 6,
+    fontSize: 11,
+    color: '#b91c1c',
+  },
+  attachmentGrid: {
+    marginTop: 10,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+    gap: 10,
+  },
+  attachmentItem: {
+    border: '1px solid #cbd5e1',
+    borderRadius: 8,
+    padding: 6,
+    background: '#f8fafc',
+  },
+  attachmentImage: {
+    width: '100%',
+    height: 90,
+    objectFit: 'cover',
+    borderRadius: 6,
+    display: 'block',
+    marginBottom: 6,
+  },
+  removeAttachmentButton: {
+    width: '100%',
+    border: '1px solid #fecaca',
+    background: '#fff1f2',
+    color: '#b91c1c',
+    borderRadius: 6,
+    fontSize: 11,
+    padding: '5px 8px',
+    cursor: 'pointer',
   },
   buttonGroup: {
     display: 'flex',

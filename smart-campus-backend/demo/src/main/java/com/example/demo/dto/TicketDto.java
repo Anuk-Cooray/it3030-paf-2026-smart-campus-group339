@@ -1,6 +1,7 @@
 package com.example.demo.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record TicketDto(
         Long id,
@@ -10,6 +11,7 @@ public record TicketDto(
         String description,
         String priority,
         String contactDetails,
+        List<String> attachments,
         String status,
         String userName,
         LocalDateTime createdAt,

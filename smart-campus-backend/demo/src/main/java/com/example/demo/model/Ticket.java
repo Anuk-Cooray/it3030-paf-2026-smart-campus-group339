@@ -47,6 +47,15 @@ public class Ticket {
     @Column(name = "contact_details")
     private String contactDetails;
 
+    @Column(name = "attachment_1", columnDefinition = "LONGTEXT")
+    private String attachment1;
+
+    @Column(name = "attachment_2", columnDefinition = "LONGTEXT")
+    private String attachment2;
+
+    @Column(name = "attachment_3", columnDefinition = "LONGTEXT")
+    private String attachment3;
+
     @Column(name = "status")
     private String status = "OPEN";
 
