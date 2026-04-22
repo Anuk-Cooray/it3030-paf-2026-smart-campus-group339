@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../../AuthContext'
 
 export default function TicketForm({ onTicketCreated }) {
-  const { authToken } = useAuth()
+  const { token: authToken } = useAuth()
   const [formData, setFormData] = useState({
     resource: '',
     location: '',
@@ -24,6 +24,7 @@ export default function TicketForm({ onTicketCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
     if (!authToken) {
       setMessage({ type: 'error', text: 'Please log in first' })
       return
@@ -31,6 +32,9 @@ export default function TicketForm({ onTicketCreated }) {
 
     setLoading(true)
     try {
+      console.log('Submitting ticket:', formData)
+      console.log('Auth token:', authToken ? 'Present' : 'Missing')
+      
       const response = await fetch('http://localhost:8080/api/tickets', {
         method: 'POST',
         headers: {
@@ -40,10 +44,17 @@ export default function TicketForm({ onTicketCreated }) {
         body: JSON.stringify(formData),
       })
 
+      console.log('Response status:', response.status)
+
       if (!response.ok) {
-        throw new Error('Failed to create ticket')
+        const errorData = await response.text()
+        console.error('Error response:', errorData)
+        throw new Error(`Server error: ${response.status} ${response.statusText}`)
       }
 
+      const data = await response.json()
+      console.log('Ticket created:', data)
+      
       setMessage({ type: 'success', text: 'Ticket created successfully!' })
       setFormData({
         resource: '',
@@ -60,7 +71,8 @@ export default function TicketForm({ onTicketCreated }) {
 
       setTimeout(() => setMessage(null), 3000)
     } catch (err) {
-      setMessage({ type: 'error', text: err.message })
+      console.error('Error creating ticket:', err)
+      setMessage({ type: 'error', text: `Error: ${err.message}` })
     } finally {
       setLoading(false)
     }
@@ -157,7 +169,7 @@ export default function TicketForm({ onTicketCreated }) {
           />
         </div>
 
-        <button type="submit" disabled={loading || !authToken} style={styles.button}>
+        <button type="submit" disabled={loading} style={styles.button}>
           {loading ? 'Creating...' : 'Create Ticket'}
         </button>
       </form>

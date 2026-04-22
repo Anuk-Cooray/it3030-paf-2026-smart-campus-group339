@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../AuthContext'
 
 export default function TicketList({ refreshTrigger }) {
-  const { authToken } = useAuth()
+  const { token: authToken } = useAuth()
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
@@ -11,6 +11,7 @@ export default function TicketList({ refreshTrigger }) {
     if (!authToken) return
 
     setLoading(true)
+    setMessage(null)
     try {
       const response = await fetch('http://localhost:8080/api/tickets', {
         headers: {
@@ -24,6 +25,7 @@ export default function TicketList({ refreshTrigger }) {
 
       const data = await response.json()
       setTickets(data)
+      setMessage(null)
     } catch (err) {
       setMessage({ type: 'error', text: err.message })
     } finally {
