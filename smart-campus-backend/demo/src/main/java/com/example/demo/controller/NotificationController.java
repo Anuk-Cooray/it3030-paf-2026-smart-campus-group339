@@ -33,16 +33,16 @@ public class NotificationController {
     @GetMapping
     public List<NotificationDto> listMine(Authentication authentication) {
         User user = resolveUser(authentication);
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+        return notificationRepository.findByUserOrderByCreatedAtDesc(user).stream()
                 .map(NotificationController::toDto)
                 .toList();
     }
 
     @PatchMapping("/{id}/read")
-    public ResponseEntity<NotificationDto> markRead(Authentication authentication, @PathVariable String id) {
+    public ResponseEntity<NotificationDto> markRead(Authentication authentication, @PathVariable Long id) {
         User user = resolveUser(authentication);
         return notificationRepository
-                .findByIdAndUserId(id, user.getId())
+                .findByIdAndUser(id, user)
                 .map(
                         notification -> {
                             notification.setRead(true);
@@ -53,10 +53,10 @@ public class NotificationController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteMine(Authentication authentication, @PathVariable String id) {
+    public ResponseEntity<Void> deleteMine(Authentication authentication, @PathVariable Long id) {
         User user = resolveUser(authentication);
         return notificationRepository
-                .findByIdAndUserId(id, user.getId())
+                .findByIdAndUser(id, user)
                 .map(
                         notification -> {
                             notificationRepository.delete(notification);
