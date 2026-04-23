@@ -1,12 +1,13 @@
 package com.example.demo.repository;
 
 import com.example.demo.model.Notification;
+import com.example.demo.model.User;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface NotificationRepository extends MongoRepository<Notification, String> {
-    List<Notification> findByUserIdOrderByCreatedAtDesc(String userId);
+public interface NotificationRepository extends JpaRepository<Notification, Long> {
+    List<Notification> findByUserOrderByCreatedAtDesc(User user);
 
-    Optional<Notification> findByIdAndUserId(String id, String userId);
+    Optional<Notification> findByIdAndUser(Long id, User user);
 }

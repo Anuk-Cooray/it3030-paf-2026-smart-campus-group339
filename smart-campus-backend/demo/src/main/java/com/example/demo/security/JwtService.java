@@ -27,15 +27,14 @@ public class JwtService {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(ttlSeconds);
 
-        JWTClaimsSet claims =
-                new JWTClaimsSet.Builder()
-                        .subject(user.getEmail())
-                        .claim("uid", String.valueOf(user.getId()))
-                        .claim("name", user.getName())
-                        .claim("role", user.getRole())
-                        .issueTime(Date.from(now))
-                        .expirationTime(Date.from(exp))
-                        .build();
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .subject(user.getEmail())
+                .claim("uid", user.getId())
+                .claim("name", user.getName())
+                .claim("role", user.getRole())
+                .issueTime(Date.from(now))
+                .expirationTime(Date.from(exp))
+                .build();
 
         SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
         jwt.sign(new MACSigner(secret.getBytes()));
