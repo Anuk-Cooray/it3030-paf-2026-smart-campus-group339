@@ -24,7 +24,9 @@ export default function Login() {
   const [standardError, setStandardError] = useState(null)
 
   function routeAfterAuth(data) {
-    navigate(data.needsProfileSetup ? '/complete-profile' : '/app/dashboard')
+    const role = String(data?.role || '')
+    const adminHome = role === 'ADMIN' || role === 'ROLE_ADMIN'
+    navigate(data.needsProfileSetup ? '/complete-profile' : adminHome ? '/admin/dashboard' : '/app/dashboard')
   }
 
   const handleGoogleSuccess = async (credentialResponse) => {

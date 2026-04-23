@@ -152,7 +152,11 @@ public class AuthController {
         User user = userOpt.get();
         String hash = user.getPassword();
         if (hash == null || hash.isBlank()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+            if ("GOOGLE".equals(user.getAuthProvider())) {
+                return ResponseEntity.status(401).body(
+                        Map.of("error", "This account uses Google Sign-In. Use Google login or complete profile setup."));
+            }
+            return ResponseEntity.status(401).body(Map.of("error", "Password is not set for this account"));
         }
 
         String candidate = loginDto.password() == null ? "" : loginDto.password();
