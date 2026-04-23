@@ -10,6 +10,8 @@ import Bookings from './pages/Bookings.jsx'
 import Tickets from './pages/Tickets.jsx'
 import Profile from './pages/Profile.jsx'
 
+
+
 export default function App() {
   return (
     <BrowserRouter>

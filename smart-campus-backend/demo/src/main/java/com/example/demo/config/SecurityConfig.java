@@ -20,48 +20,46 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(
-                List.of("http://localhost:5173", "http://localhost:5174"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+        @Bean
+        CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                configuration.setAllowedOrigins(
+                                List.of("http://localhost:5173", "http://localhost:5174"));
+                configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                configuration.setAllowedHeaders(List.of("*"));
+                configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
-            throws Exception {
-        http.csrf(csrf -> csrf.disable());
-        http.cors(Customizer.withDefaults());
-        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        @Bean
+        SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
+                        throws Exception {
+                http.csrf(csrf -> csrf.disable());
+                http.cors(Customizer.withDefaults());
+                http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        http.authorizeHttpRequests(
-                auth ->
-                        auth.requestMatchers(HttpMethod.OPTIONS, "/**")
-                                .permitAll()
-                                .requestMatchers(HttpMethod.POST, "/api/auth/google")
-                                .permitAll()
-                                .requestMatchers(HttpMethod.POST, "/api/auth/login")
-                                .permitAll()
-                                .anyRequest()
-                                .authenticated());
+                http.authorizeHttpRequests(
+                                auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/auth/google")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/auth/login")
+                                                .permitAll()
+                                                .anyRequest()
+                                                .authenticated());
 
-        http.exceptionHandling(
-                ex ->
-                        ex.authenticationEntryPoint(
-                                (request, response, authException) -> {
-                                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                                    response.setContentType("text/plain;charset=UTF-8");
-                                    response.getWriter().write("Unauthorized");
-                                }));
+                http.exceptionHandling(
+                                ex -> ex.authenticationEntryPoint(
+                                                (request, response, authException) -> {
+                                                        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                                                        response.setContentType("text/plain;charset=UTF-8");
+                                                        response.getWriter().write("Unauthorized");
+                                                }));
 
-        return http.build();
-    }
+                return http.build();
+        }
 }
