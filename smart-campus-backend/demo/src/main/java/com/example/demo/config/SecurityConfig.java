@@ -50,6 +50,18 @@ public class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers(HttpMethod.POST, "/api/auth/login")
                                 .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/facilities/**")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.POST, "/api/facilities/**")
+                                .hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/facilities/**")
+                                .hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/facilities/**")
+                                .hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/api/bookings/**")
+                                .hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/api/bookings/**")
+                                .hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated());
 
