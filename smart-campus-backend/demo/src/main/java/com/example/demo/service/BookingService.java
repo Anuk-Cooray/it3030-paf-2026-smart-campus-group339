@@ -12,17 +12,12 @@ import org.springframework.stereotype.Service;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-// ✅ Long bookingId → String bookingId (MongoDB ObjectId)
-// ✅ user.getId() comparison — String ලෙස compare කරනවා
-// ✅ exportToCsv — findAllByStatusOptional → separate methods
 
 @Service
 @RequiredArgsConstructor
@@ -63,14 +58,11 @@ public class BookingService {
         booking.setPurpose(request.getPurpose());
         booking.setExpectedAttendees(request.getExpectedAttendees());
         booking.setStatus("PENDING");
-        booking.setCreatedAt(LocalDateTime.now()); // ✅ @CreatedDate doesn't work without @EnableMongoAuditing — safe
-                                                   // manual fallback
 
         return bookingRepository.save(booking);
     }
 
-    // ✅ Long → String
-    public Booking updateBookingStatus(String bookingId, User user, String status, String adminReason) {
+    public Booking updateBookingStatus(Long bookingId, User user, String status, String adminReason) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found."));
 
@@ -90,14 +82,12 @@ public class BookingService {
 
             Notification notification = new Notification();
             notification.setUser(booking.getUser());
-            notification.setMessage("Your booking for " + booking.getResourceName() + " on "
-                    + booking.getBookingDate() + " has been " + status + ".");
+            notification.setMessage("Your booking for " + booking.getResourceName() + " on " + booking.getBookingDate()
+                    + " has been " + status + ".");
             notificationRepository.save(notification);
 
         } else if ("CANCELLED".equals(status)) {
-            // ✅ String comparison for MongoDB String id
-            if (!"ROLE_ADMIN".equals(user.getRole())
-                    && !booking.getUser().getId().equals(user.getId())) {
+            if (!"ROLE_ADMIN".equals(user.getRole()) && !booking.getUser().getId().equals(user.getId())) {
                 throw new SecurityException("You can only cancel your own bookings.");
             }
             if ("REJECTED".equals(booking.getStatus())) {
@@ -111,8 +101,7 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    // ✅ Long → String
-    public void deleteBooking(String bookingId, User user) {
+    public void deleteBooking(Long bookingId, User user) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found."));
 
@@ -128,7 +117,7 @@ public class BookingService {
         }
     }
 
-    // Feature 1: Heatmap — resource + week ලෝ BUSY/FREE slots
+    // Feature 1: Heatmap — resource + week availability
     public Map<String, List<Map<String, String>>> getWeeklyAvailability(String resourceName, LocalDate weekStart) {
         LocalDate weekEnd = weekStart.plusDays(6);
         List<Booking> bookings = bookingRepository.findBookingsForResourceBetweenDates(resourceName, weekStart,
@@ -150,9 +139,9 @@ public class BookingService {
                 LocalTime slotEnd = slotStart.plusHours(1);
                 String slotLabel = slotStart + "-" + slotEnd;
 
-                boolean busy = bookings.stream().anyMatch(b -> b.getBookingDate().equals(date)
-                        && b.getStartTime().isBefore(slotEnd)
-                        && b.getEndTime().isAfter(slotStart));
+                boolean busy = bookings.stream().anyMatch(b -> b.getBookingDate().equals(date) &&
+                        b.getStartTime().isBefore(slotEnd) &&
+                        b.getEndTime().isAfter(slotStart));
 
                 slots.add(Map.of("slot", slotLabel, "status", busy ? "BUSY" : "FREE"));
             }
@@ -167,7 +156,7 @@ public class BookingService {
     public String exportToCsv(String status) {
         List<Booking> bookings = (status == null || status.equals("ALL"))
                 ? bookingRepository.findAllByOrderByCreatedAtDesc()
-                : bookingRepository.findByStatusOrderByCreatedAtDesc(status);
+                : bookingRepository.findAllByStatusOptional(status);
 
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
@@ -177,7 +166,7 @@ public class BookingService {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
         for (Booking b : bookings) {
-            pw.printf("%s,%s,%s,%s,%s,%s,%s,\"%s\",%d,\"%s\",%s%n",
+            pw.printf("%d,%s,%s,%s,%s,%s,%s,\"%s\",%d,\"%s\",%s%n",
                     b.getId(),
                     escapeCsv(b.getResourceName()),
                     b.getBookingDate(),

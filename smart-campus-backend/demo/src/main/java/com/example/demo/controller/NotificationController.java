@@ -8,6 +8,7 @@ import com.example.demo.repository.UserRepository;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/notifications")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" })
 public class NotificationController {
 
     private final NotificationRepository notificationRepository;
@@ -33,16 +34,17 @@ public class NotificationController {
     @GetMapping
     public List<NotificationDto> listMine(Authentication authentication) {
         User user = resolveUser(authentication);
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+        return notificationRepository.findByUserOrderByCreatedAtDesc(user).stream()
                 .map(NotificationController::toDto)
                 .toList();
     }
 
     @PatchMapping("/{id}/read")
-    public ResponseEntity<NotificationDto> markRead(Authentication authentication, @PathVariable String id) {
+    @Transactional
+    public ResponseEntity<NotificationDto> markRead(Authentication authentication, @PathVariable Long id) {
         User user = resolveUser(authentication);
         return notificationRepository
-                .findByIdAndUserId(id, user.getId())
+                .findByIdAndUser(id, user)
                 .map(
                         notification -> {
                             notification.setRead(true);
@@ -53,10 +55,11 @@ public class NotificationController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteMine(Authentication authentication, @PathVariable String id) {
+    @Transactional
+    public ResponseEntity<Void> deleteMine(Authentication authentication, @PathVariable Long id) {
         User user = resolveUser(authentication);
         return notificationRepository
-                .findByIdAndUserId(id, user.getId())
+                .findByIdAndUser(id, user)
                 .map(
                         notification -> {
                             notificationRepository.delete(notification);

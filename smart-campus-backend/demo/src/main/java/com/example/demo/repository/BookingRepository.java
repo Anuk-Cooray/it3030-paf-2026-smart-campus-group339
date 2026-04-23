@@ -1,48 +1,43 @@
 package com.example.demo.repository;
 
 import com.example.demo.model.Booking;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
-// ✅ JpaRepository → MongoRepository
-// ✅ Long → String (MongoDB ObjectId)
-// ✅ JPQL @Query → MongoDB JSON @Query
-// ✅ findAllByStatusOptional → separate methods (MongoDB doesn't support JPQL IS NULL check the same way)
-
 @Repository
-public interface BookingRepository extends MongoRepository<Booking, String> {
+public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-        // User ගේ bookings — createdAt desc order
-        List<Booking> findByUserIdOrderByCreatedAtDesc(String userId);
+        List<Booking> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-        // Admin — සියලු bookings
         List<Booking> findAllByOrderByCreatedAtDesc();
 
-        // Conflict check — same resource, same date, overlapping time, PENDING/APPROVED
-        // only
-        @Query("{ 'resourceName': ?0, 'bookingDate': ?1, 'status': { $in: ['PENDING', 'APPROVED'] }, " +
-                        "'startTime': { $lt: ?3 }, 'endTime': { $gt: ?2 } }")
+        @Query("SELECT b FROM Booking b WHERE b.resourceName = :resourceName " +
+                        "AND b.bookingDate = :bookingDate " +
+                        "AND b.status IN ('PENDING', 'APPROVED') " +
+                        "AND ((b.startTime < :newEndTime AND b.endTime > :newStartTime))")
         List<Booking> findOverlappingBookings(
-                        String resourceName,
-                        LocalDate bookingDate,
-                        LocalTime newStartTime,
-                        LocalTime newEndTime);
+                        @Param("resourceName") String resourceName,
+                        @Param("bookingDate") LocalDate bookingDate,
+                        @Param("newStartTime") LocalTime newStartTime,
+                        @Param("newEndTime") LocalTime newEndTime);
 
-        // Heatmap: resource + date range, PENDING/APPROVED only
-        @Query("{ 'resourceName': ?0, 'bookingDate': { $gte: ?1, $lte: ?2 }, 'status': { $in: ['PENDING', 'APPROVED'] } }")
+        // ✅ Heatmap: resource එකක් given week ලෝ bookings
+        @Query("SELECT b FROM Booking b WHERE b.resourceName = :resourceName " +
+                        "AND b.bookingDate BETWEEN :startDate AND :endDate " +
+                        "AND b.status IN ('PENDING', 'APPROVED')")
         List<Booking> findBookingsForResourceBetweenDates(
-                        String resourceName,
-                        LocalDate startDate,
-                        LocalDate endDate);
+                        @Param("resourceName") String resourceName,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
 
-        // Export: status filter — ALL or specific status
-        List<Booking> findByStatusOrderByCreatedAtDesc(String status);
-
-        // Status filter — admin panel
-        List<Booking> findByStatus(String status);
+        // ✅ Export: admin සඳහා සියලු bookings (optional status filter)
+        @Query("SELECT b FROM Booking b WHERE (:status IS NULL OR b.status = :status) " +
+                        "ORDER BY b.createdAt DESC")
+        List<Booking> findAllByStatusOptional(@Param("status") String status);
 }
