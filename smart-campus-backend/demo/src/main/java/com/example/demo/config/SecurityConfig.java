@@ -62,6 +62,18 @@ public class SecurityConfig {
                                 .hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.PATCH, "/api/bookings/**")
                                 .hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/api/tickets/**")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.GET, "/api/tickets/**")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.PATCH, "/api/tickets/**")
+                                .hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/api/tickets/*/comments")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.GET, "/api/tickets/*/comments")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.DELETE, "/api/comments/**")
+                                .authenticated()
                                 .anyRequest()
                                 .authenticated());
 

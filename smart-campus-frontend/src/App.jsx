@@ -13,7 +13,7 @@ import Profile from './pages/Profile.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import FacilitiesAdmin from './pages/admin/FacilitiesAdmin.jsx'
 import BookingsAdmin from './pages/admin/BookingsAdmin.jsx'
-import AdminTicketsPlaceholder from './pages/admin/AdminTicketsPlaceholder.jsx'
+import TicketsAdmin from './pages/admin/TicketsAdmin.jsx'
 
 export default function App() {
   return (
@@ -60,7 +60,7 @@ export default function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="facilities" element={<FacilitiesAdmin />} />
           <Route path="bookings" element={<BookingsAdmin />} />
-          <Route path="tickets" element={<AdminTicketsPlaceholder />} />
+          <Route path="tickets" element={<TicketsAdmin />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
