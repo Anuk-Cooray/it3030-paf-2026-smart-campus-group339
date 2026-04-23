@@ -135,25 +135,33 @@ public class AuthController {
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> standardLogin(@RequestBody LoginDto loginDto) {
-        String studentId = loginDto.studentId() == null ? "" : loginDto.studentId().trim();
-        if (studentId.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Student ID is required."));
+        String identifier = loginDto.studentId() == null ? "" : loginDto.studentId().trim();
+        if (identifier.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Student ID or email is required."));
         }
 
-        Optional<User> userOpt = userRepository.findByStudentId(studentId);
+        // If the identifier looks like an email, look up by email (admin login path)
+        Optional<User> userOpt = identifier.contains("@")
+                ? userRepository.findByEmail(identifier)
+                : userRepository.findByStudentId(identifier);
+
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid Student ID or password"));
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
 
         User user = userOpt.get();
         String hash = user.getPassword();
         if (hash == null || hash.isBlank()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid Student ID or password"));
+            if ("GOOGLE".equals(user.getAuthProvider())) {
+                return ResponseEntity.status(401).body(
+                        Map.of("error", "This account uses Google Sign-In. Use Google login or complete profile setup."));
+            }
+            return ResponseEntity.status(401).body(Map.of("error", "Password is not set for this account"));
         }
 
         String candidate = loginDto.password() == null ? "" : loginDto.password();
         if (!passwordEncoder.matches(candidate, hash)) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid Student ID or password"));
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
 
         try {
