@@ -30,7 +30,7 @@ public class JwtService {
         JWTClaimsSet claims =
                 new JWTClaimsSet.Builder()
                         .subject(user.getEmail())
-                        .claim("uid", user.getId())
+                        .claim("uid", String.valueOf(user.getId()))
                         .claim("name", user.getName())
                         .claim("role", user.getRole())
                         .issueTime(Date.from(now))

@@ -8,7 +8,6 @@ import com.example.demo.repository.UserRepository;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,17 +33,16 @@ public class NotificationController {
     @GetMapping
     public List<NotificationDto> listMine(Authentication authentication) {
         User user = resolveUser(authentication);
-        return notificationRepository.findByUserOrderByCreatedAtDesc(user).stream()
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
                 .map(NotificationController::toDto)
                 .toList();
     }
 
     @PatchMapping("/{id}/read")
-    @Transactional
-    public ResponseEntity<NotificationDto> markRead(Authentication authentication, @PathVariable Long id) {
+    public ResponseEntity<NotificationDto> markRead(Authentication authentication, @PathVariable String id) {
         User user = resolveUser(authentication);
         return notificationRepository
-                .findByIdAndUser(id, user)
+                .findByIdAndUserId(id, user.getId())
                 .map(
                         notification -> {
                             notification.setRead(true);
@@ -55,11 +53,10 @@ public class NotificationController {
     }
 
     @DeleteMapping("/{id}")
-    @Transactional
-    public ResponseEntity<Void> deleteMine(Authentication authentication, @PathVariable Long id) {
+    public ResponseEntity<Void> deleteMine(Authentication authentication, @PathVariable String id) {
         User user = resolveUser(authentication);
         return notificationRepository
-                .findByIdAndUser(id, user)
+                .findByIdAndUserId(id, user.getId())
                 .map(
                         notification -> {
                             notificationRepository.delete(notification);
