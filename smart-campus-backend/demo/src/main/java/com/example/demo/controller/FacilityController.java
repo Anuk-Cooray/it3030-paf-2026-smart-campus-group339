@@ -133,7 +133,16 @@ public class FacilityController {
     @DeleteMapping("/{id}")
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-   
+    public ResponseEntity<Void> deleteFacility(@PathVariable Long id) {
+        return facilityRepository
+                .findById(id)
+                .map(
+      
+                            facilityRepository.delete(facility);
+                            return ResponseEntity.noContent().<Void>build();
+                        })
+                .orElse(ResponseEntity.notFound().build());
+    }
 
    
             FacilityType type, Integer capacity, Integer minCapacity, String location, FacilityStatus status) {
