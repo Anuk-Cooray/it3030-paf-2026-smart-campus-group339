@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/facilities")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
-
+public class FacilityController {
     private final FacilityRepository facilityRepository;
 
    
