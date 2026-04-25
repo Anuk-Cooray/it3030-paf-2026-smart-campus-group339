@@ -219,7 +219,7 @@ public class FacilityController {
                 facility.getUpdatedAt());
     }
 
-    
+    private static void validateAvailabilityWindows(List<FacilityAvailabilityWindowDto> availabilityWindows) {
         if (availabilityWindows == null || availabilityWindows.isEmpty()) {
             throw new IllegalArgumentException("At least one availability window is required");
         }
