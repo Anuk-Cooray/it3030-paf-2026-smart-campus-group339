@@ -126,7 +126,111 @@ export default function Facilities() {
     setError('')
   }
 
- 
+  const removeFacility = async (facility) => {
+    if (!canManage) {
+      setError('You do not have permission to delete facilities.')
+      return
+    }
+
+    const confirmed = window.confirm(`Delete ${facility.name}? This action cannot be undone.`)
+    if (!confirmed) return
+
+    try {
+      setError('')
+      setNotice('')
+      await deleteFacility(facility.id)
+      setNotice('Facility deleted successfully.')
+
+      if (selectedFacility?.id === facility.id) {
+        setSelectedFacility(null)
+      }
+
+      refreshData()
+    } catch (deleteError) {
+      setError(getErrorMessage(deleteError))
+    }
+  }
+
+  const toggleStatus = async (facility) => {
+    if (!canManage) {
+      setError('You do not have permission to change facility status.')
+      return
+    }
+
+    const nextStatus = facility.status === 'ACTIVE' ? 'OUT_OF_SERVICE' : 'ACTIVE'
+
+    try {
+      setError('')
+      setNotice('')
+      await updateFacilityStatus(facility.id, nextStatus)
+      setNotice(`Facility marked as ${nextStatus === 'ACTIVE' ? 'active' : 'out of service'}.`)
+      refreshData()
+    } catch (statusError) {
+      setError(getErrorMessage(statusError))
+    }
+  }
+
+  const changePage = (nextPage) => {
+    setFilters((prev) => ({
+      ...prev,
+      page: nextPage,
+    }))
+  }
+
+  return (
+    <div style={pageContainer}>
+      <div style={headerCard}>
+        <div style={headerGlowOne} />
+        <div style={headerGlowTwo} />
+        <div style={headerGlowThree} />
+        <div style={headerContent}>
+          <div style={eyebrow}>Module A</div>
+          <h1 style={h1}>Facilities & Assets Catalogue</h1>
+          <p style={headerP}>
+            Manage lecture halls, laboratories, meeting rooms, projectors, cameras, and shared campus
+            assets.
+          </p>
+        </div>
+      </div>
+
+      <div style={statsRow}>
+        <StatCard label="Visible Results" value={facilities.length} />
+        <StatCard label="Total Catalogue" value={pagination.totalElements} />
+        <StatCard label="Current Page" value={pagination.page + 1} />
+      </div>
+
+      {canManage && (
+        <>
+          <FacilityForm
+            facility={selectedFacility}
+            onSubmitFacility={submitFacility}
+            onCancel={() => setSelectedFacility(null)}
+            submitting={submitting}
+            canManage={canManage}
+            message={notice}
+          />
+
+          <div style={spacer} />
+        </>
+      )}
+
+      <FacilityList
+        facilities={facilities}
+        loading={loading}
+        error={error}
+        filters={filters}
+        onFilterChange={applyFilterChange}
+        onClearFilters={clearFilters}
+        onEdit={editFacility}
+        onDelete={removeFacility}
+        onToggleStatus={toggleStatus}
+        canManage={canManage}
+        pagination={pagination}
+        onPageChange={changePage}
+      />
+    </div>
+  )
+}
 
 
 
