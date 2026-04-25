@@ -114,7 +114,10 @@ public class FacilityController {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<FacilityDto> updateStatus(@PathVariable Long id, @RequestBody StatusUpdateDto dto) {
-       
+        if (dto == null || dto.status() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
         return facilityRepository
                 .findById(id)
                 .map(
