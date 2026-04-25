@@ -76,7 +76,58 @@ export default function Facilities() {
     loadFacilities()
   }, [filters, refreshTick])
 
+  const applyFilterChange = (field, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+      page: 0,
+    }))
+  }
+
+  const clearFilters = () => {
+    setSelectedFacility(null)
+    setNotice('')
+    setFilters(INITIAL_FILTERS)
+  }
+
+  const refreshData = () => setRefreshTick((prev) => prev + 1)
+
+  const submitFacility = async (payload) => {
+    if (!canManage) {
+      setError('You do not have permission to manage facilities.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    setNotice('')
+
+    try {
+      if (selectedFacility?.id) {
+        await updateFacility(selectedFacility.id, payload)
+        setNotice('Facility updated successfully.')
+      } else {
+        await createFacility(payload)
+        setNotice('Facility created successfully.')
+      }
+
+      setSelectedFacility(null)
+      refreshData()
+    } catch (saveError) {
+      setError(getErrorMessage(saveError))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const editFacility = (facility) => {
+    setSelectedFacility(facility)
+    setNotice('')
+    setError('')
+  }
+
  
+
 
 
 const spacer = { height: 2 }
