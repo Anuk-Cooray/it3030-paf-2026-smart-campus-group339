@@ -1,6 +1,6 @@
 package com.example.demo.repository;
 
 import com.example.demo.model.Facility;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface FacilityRepository extends MongoRepository<Facility, String> {}
+public interface FacilityRepository extends JpaRepository<Facility, Long> {}

@@ -32,7 +32,7 @@ public class CommentController {
 
     @PostMapping("/api/tickets/{ticketId}/comments")
     public ResponseEntity<?> addComment(
-            Authentication authentication, @PathVariable String ticketId, @RequestBody Map<String, String> payload) {
+            Authentication authentication, @PathVariable Long ticketId, @RequestBody Map<String, String> payload) {
         User user = resolveUser(authentication);
         String text = payload == null ? null : payload.get("text");
         if (text == null || text.isBlank()) {
@@ -48,13 +48,13 @@ public class CommentController {
     }
 
     @GetMapping("/api/tickets/{ticketId}/comments")
-    public List<Comment> listComments(Authentication authentication, @PathVariable String ticketId) {
+    public List<Comment> listComments(Authentication authentication, @PathVariable Long ticketId) {
         resolveUser(authentication);
         return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId);
     }
 
     @DeleteMapping("/api/comments/{commentId}")
-    public ResponseEntity<?> deleteComment(Authentication authentication, @PathVariable String commentId) {
+    public ResponseEntity<?> deleteComment(Authentication authentication, @PathVariable Long commentId) {
         User user = resolveUser(authentication);
         return commentRepository
                 .findById(commentId)

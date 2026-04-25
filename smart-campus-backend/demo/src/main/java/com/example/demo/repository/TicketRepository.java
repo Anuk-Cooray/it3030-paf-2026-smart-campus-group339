@@ -2,8 +2,8 @@ package com.example.demo.repository;
 
 import com.example.demo.model.Ticket;
 import java.util.List;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface TicketRepository extends MongoRepository<Ticket, String> {
-    List<Ticket> findByUserIdOrderByCreatedAtDesc(String userId);
+public interface TicketRepository extends JpaRepository<Ticket, Long> {
+    List<Ticket> findByUserIdOrderByCreatedAtDesc(Long userId);
 }

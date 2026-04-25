@@ -58,7 +58,7 @@ public class TicketController {
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(
-            Authentication authentication, @PathVariable String id, @RequestBody Map<String, String> payload) {
+            Authentication authentication, @PathVariable Long id, @RequestBody Map<String, String> payload) {
         if (!isAdmin(authentication)) {
             return ResponseEntity.status(403).body(Map.of("error", "Forbidden"));
         }

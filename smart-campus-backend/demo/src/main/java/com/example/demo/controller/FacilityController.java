@@ -37,7 +37,7 @@ public class FacilityController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Facility> update(@PathVariable String id, @RequestBody Facility payload) {
+    public ResponseEntity<Facility> update(@PathVariable Long id, @RequestBody Facility payload) {
         return facilityRepository
                 .findById(id)
                 .map(
@@ -54,7 +54,7 @@ public class FacilityController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!facilityRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }

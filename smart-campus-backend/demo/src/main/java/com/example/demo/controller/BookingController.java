@@ -3,8 +3,10 @@ package com.example.demo.controller;
 import com.example.demo.model.Booking;
 import com.example.demo.model.Booking.Status;
 import com.example.demo.model.Notification;
+import com.example.demo.model.User;
 import com.example.demo.repository.BookingRepository;
 import com.example.demo.repository.NotificationRepository;
+import com.example.demo.repository.UserRepository;
 import com.example.demo.service.BookingService;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,14 +29,17 @@ public class BookingController {
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
     public BookingController(
             BookingRepository bookingRepository,
             BookingService bookingService,
-            NotificationRepository notificationRepository) {
+            NotificationRepository notificationRepository,
+            UserRepository userRepository) {
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -47,7 +52,7 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/approve")
-    public ResponseEntity<?> approve(@PathVariable String id) {
+    public ResponseEntity<?> approve(@PathVariable Long id) {
         return bookingRepository
                 .findById(id)
                 .map(
@@ -70,7 +75,7 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/reject")
-    public ResponseEntity<?> reject(@PathVariable String id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> reject(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         return bookingRepository
                 .findById(id)
                 .map(
@@ -92,10 +97,12 @@ public class BookingController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private void notifyUser(String userId, String message) {
-        if (userId == null || userId.isBlank()) return;
+    private void notifyUser(Long userId, String message) {
+        if (userId == null) return;
         Notification n = new Notification();
-        n.setUserId(userId);
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return;
+        n.setUser(user);
         n.setMessage(message);
         n.setRead(false);
         n.setCreatedAt(LocalDateTime.now());
