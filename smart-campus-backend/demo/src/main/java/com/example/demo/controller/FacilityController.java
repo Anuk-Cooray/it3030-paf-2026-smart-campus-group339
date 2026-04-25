@@ -121,7 +121,7 @@ public class FacilityController {
         return facilityRepository
                 .findById(id)
                 .map(
-                       
+                        facility -> {
                             facility.setStatus(dto.status());
                             facility.setUpdatedAt(LocalDateTime.now());
                             Facility saved = facilityRepository.save(facility);
