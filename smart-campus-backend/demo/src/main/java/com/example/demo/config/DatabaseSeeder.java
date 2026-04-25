@@ -19,17 +19,13 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (userRepository.findByEmail("admin@campus.lk").isPresent()) {
-            return;
-        }
-
-        User admin = new User();
+        User admin = userRepository.findByEmail("admin@campus.lk").orElseGet(User::new);
         admin.setEmail("admin@campus.lk");
         admin.setName("Campus Admin");
         admin.setRole("ROLE_ADMIN");
-        admin.setPassword(passwordEncoder.encode("12121212"));
-        admin.setAuthProvider("LOCAL");
         admin.setStudentId("ADMIN001");
+        admin.setAuthProvider("LOCAL");
+        admin.setPassword(passwordEncoder.encode("12121212"));
         userRepository.save(admin);
     }
 }

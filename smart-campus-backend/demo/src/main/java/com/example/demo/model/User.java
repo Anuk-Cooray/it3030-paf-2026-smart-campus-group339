@@ -12,7 +12,7 @@ import lombok.Data;
 
 @Entity
 @Data
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @Table(name = "users")
 public class User {
 
@@ -35,7 +35,10 @@ public class User {
     @Column(nullable = false)
     private String role;
 
-    /** BCrypt hash; null until the user sets a local password (e.g. after Google onboarding). */
+    /**
+     * BCrypt hash; null until the user sets a local password (e.g. after Google
+     * onboarding).
+     */
     @JsonIgnore
     @Column(name = "password_hash")
     private String password;
@@ -44,7 +47,10 @@ public class User {
     @Column(name = "student_id", unique = true)
     private String studentId;
 
-    /** e.g. GOOGLE, GOOGLE_AND_LOCAL — null for legacy rows created before this column existed. */
+    /**
+     * e.g. GOOGLE, GOOGLE_AND_LOCAL — null for legacy rows created before this
+     * column existed.
+     */
     @Column(name = "auth_provider")
     private String authProvider;
 }

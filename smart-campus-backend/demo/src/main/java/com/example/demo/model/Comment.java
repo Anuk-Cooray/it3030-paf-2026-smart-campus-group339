@@ -1,6 +1,7 @@
 package com.example.demo.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -11,7 +12,7 @@ import lombok.Data;
 
 @Entity
 @Data
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @Table(name = "comments")
 public class Comment {
 
@@ -19,9 +20,16 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "ticket_id", nullable = false)
     private Long ticketId;
+
+    @Column(name = "user_id", nullable = false)
     private Long userId;
+
     private String userName;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 }

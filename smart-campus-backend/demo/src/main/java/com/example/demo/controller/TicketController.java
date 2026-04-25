@@ -1,16 +1,20 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.CreateTicketDto;
+import com.example.demo.dto.TicketDto;
 import com.example.demo.model.Ticket;
-import com.example.demo.model.Ticket.Status;
 import com.example.demo.model.User;
 import com.example.demo.repository.TicketRepository;
 import com.example.demo.repository.UserRepository;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,70 +37,163 @@ public class TicketController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(Authentication authentication, @RequestBody Ticket ticket) {
+    public ResponseEntity<TicketDto> createTicket(
+            Authentication authentication, @RequestBody CreateTicketDto createTicketDto) {
         User user = resolveUser(authentication);
-        List<String> attachments = ticket.getImageAttachments();
-        if (attachments != null && attachments.size() > 3) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Maximum 3 image attachments are allowed."));
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        ticket.setId(null);
-        ticket.setUserId(user.getId());
-        ticket.setUserName(user.getName() == null || user.getName().isBlank() ? user.getEmail() : user.getName());
-        ticket.setStatus(Status.OPEN);
-        return ResponseEntity.ok(ticketRepository.save(ticket));
+        List<String> attachments;
+        try {
+            attachments = sanitizeAttachments(createTicketDto.attachments());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
+        Ticket ticket = new Ticket();
+        ticket.setUser(user);
+        ticket.setResource(createTicketDto.resource());
+        ticket.setLocation(createTicketDto.location());
+        ticket.setCategory(createTicketDto.category());
+        ticket.setDescription(createTicketDto.description());
+        ticket.setPriority(createTicketDto.priority());
+        ticket.setContactDetails(createTicketDto.contactDetails());
+        ticket.setAttachment1(attachments.size() > 0 ? attachments.get(0) : null);
+        ticket.setAttachment2(attachments.size() > 1 ? attachments.get(1) : null);
+        ticket.setAttachment3(attachments.size() > 2 ? attachments.get(2) : null);
+        ticket.setStatus("OPEN");
+        ticket.setCreatedAt(LocalDateTime.now());
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toDto(savedTicket));
     }
 
     @GetMapping
-    public List<Ticket> list(Authentication authentication) {
+    public ResponseEntity<List<TicketDto>> listAllTickets() {
+        List<Ticket> tickets = ticketRepository.findAllByOrderByCreatedAtDesc();
+        List<TicketDto> dtos = tickets.stream().map(TicketController::toDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/my-tickets")
+    public ResponseEntity<List<TicketDto>> listMyTickets(Authentication authentication) {
         User user = resolveUser(authentication);
-        if (isAdmin(authentication)) {
-            return ticketRepository.findAll();
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ticketRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+        List<Ticket> tickets = ticketRepository.findByUserOrderByCreatedAtDesc(user);
+        List<TicketDto> dtos = tickets.stream().map(TicketController::toDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TicketDto> getTicket(@PathVariable Long id) {
+        return ticketRepository
+                .findById(id)
+                .map(ticket -> ResponseEntity.ok(toDto(ticket)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<?> updateStatus(
-            Authentication authentication, @PathVariable Long id, @RequestBody Map<String, String> payload) {
-        if (!isAdmin(authentication)) {
-            return ResponseEntity.status(403).body(Map.of("error", "Forbidden"));
+    @Transactional
+    public ResponseEntity<TicketDto> updateTicketStatus(
+            Authentication authentication, @PathVariable Long id, @RequestBody StatusUpdateDto statusUpdate) {
+        User user = resolveUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+
         return ticketRepository
-                .findById(id)
+                .findByIdAndUser(id, user)
                 .map(
                         ticket -> {
-                            String nextStatus = payload.get("status");
-                            if (nextStatus != null && !nextStatus.isBlank()) {
-                                ticket.setStatus(Status.valueOf(nextStatus.trim().toUpperCase()));
-                            }
-                            if (payload.containsKey("assignedTech")) {
-                                ticket.setAssignedTech(payload.get("assignedTech"));
-                            }
-                            if (payload.containsKey("resolutionNotes")) {
-                                ticket.setResolutionNotes(payload.get("resolutionNotes"));
-                            }
-                            return ResponseEntity.ok(ticketRepository.save(ticket));
+                            ticket.setStatus(statusUpdate.status());
+                            ticket.setUpdatedAt(LocalDateTime.now());
+                            Ticket updated = ticketRepository.save(ticket);
+                            return ResponseEntity.ok(toDto(updated));
                         })
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<Void> deleteTicket(Authentication authentication, @PathVariable Long id) {
+        User user = resolveUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        return ticketRepository
+                .findByIdAndUser(id, user)
+                .map(
+                        ticket -> {
+                            ticketRepository.delete(ticket);
+                            return ResponseEntity.noContent().<Void>build();
+                        })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     private User resolveUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            throw new IllegalStateException("Not authenticated");
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
         }
-        return userRepository
-                .findByEmail(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("User not found"));
+        String email = authentication.getName();
+        return userRepository.findByEmail(email).orElse(null);
     }
 
-    private static boolean isAdmin(Authentication authentication) {
-        if (authentication == null) return false;
-        for (GrantedAuthority authority : authentication.getAuthorities()) {
-            if ("ROLE_ADMIN".equals(authority.getAuthority()) || "ADMIN".equals(authority.getAuthority())) {
-                return true;
-            }
+    private static TicketDto toDto(Ticket ticket) {
+        List<String> attachments = new ArrayList<>();
+        if (ticket.getAttachment1() != null && !ticket.getAttachment1().isBlank()) {
+            attachments.add(ticket.getAttachment1());
         }
-        return false;
+        if (ticket.getAttachment2() != null && !ticket.getAttachment2().isBlank()) {
+            attachments.add(ticket.getAttachment2());
+        }
+        if (ticket.getAttachment3() != null && !ticket.getAttachment3().isBlank()) {
+            attachments.add(ticket.getAttachment3());
+        }
+
+        return new TicketDto(
+                ticket.getId(),
+                ticket.getResource(),
+                ticket.getLocation(),
+                ticket.getCategory(),
+                ticket.getDescription(),
+                ticket.getPriority(),
+                ticket.getContactDetails(),
+                attachments,
+                ticket.getStatus(),
+                ticket.getUser().getName(),
+                ticket.getCreatedAt(),
+                ticket.getUpdatedAt());
     }
+
+    private static List<String> sanitizeAttachments(List<String> attachments) {
+        if (attachments == null) {
+            return List.of();
+        }
+        if (attachments.size() > 3) {
+            throw new IllegalArgumentException("Maximum 3 attachments allowed");
+        }
+
+        List<String> cleaned = new ArrayList<>();
+        for (String attachment : attachments) {
+            if (attachment == null || attachment.isBlank()) {
+                continue;
+            }
+            if (!attachment.startsWith("data:image/")) {
+                throw new IllegalArgumentException("Only image attachments are allowed");
+            }
+            cleaned.add(attachment);
+        }
+
+        if (cleaned.size() > 3) {
+            throw new IllegalArgumentException("Maximum 3 attachments allowed");
+        }
+        return cleaned;
+    }
+
+    public record StatusUpdateDto(String status) {}
 }

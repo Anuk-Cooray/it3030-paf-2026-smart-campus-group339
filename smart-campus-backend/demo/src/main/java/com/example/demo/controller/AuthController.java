@@ -26,15 +26,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" })
 public class AuthController {
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
 
-    private static final String CLIENT_ID =
-            "291429509751-oofn0bvctjl4c343kc3vudi7gtq5isep.apps.googleusercontent.com";
+    private static final String CLIENT_ID = "291429509751-oofn0bvctjl4c343kc3vudi7gtq5isep.apps.googleusercontent.com";
 
     public AuthController(UserRepository userRepository, JwtService jwtService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -45,10 +44,10 @@ public class AuthController {
     @PostMapping(value = "/google", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AuthResponseDto> authenticateGoogleUser(@RequestBody TokenDto tokenDto) {
         try {
-            GoogleIdTokenVerifier verifier =
-                    new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-                            .setAudience(Collections.singletonList(CLIENT_ID))
-                            .build();
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
+                    new GsonFactory())
+                    .setAudience(Collections.singletonList(CLIENT_ID))
+                    .build();
 
             GoogleIdToken idToken = verifier.verify(tokenDto.getToken());
 
@@ -82,13 +81,11 @@ public class AuthController {
     }
 
     /**
-     * Links a Google-only account to a campus Student ID and a local password. Requires a valid JWT from Google
+     * Links a Google-only account to a campus Student ID and a local password.
+     * Requires a valid JWT from Google
      * sign-in (email is taken from the token, never from the request body).
      */
-    @PostMapping(
-            value = "/complete-profile",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/complete-profile", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> completeProfile(Authentication authentication, @RequestBody ProfileSetupDto dto) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
@@ -103,7 +100,8 @@ public class AuthController {
         User user = userOpt.get();
         if (!"GOOGLE".equals(user.getAuthProvider())) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Profile setup is only for Google accounts that have not linked local credentials yet."));
+                    .body(Map.of("error",
+                            "Profile setup is only for Google accounts that have not linked local credentials yet."));
         }
         if (!needsProfileSetup(user)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Profile is already complete."));
@@ -135,30 +133,35 @@ public class AuthController {
         }
     }
 
-    @PostMapping(
-            value = "/login",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> standardLogin(@RequestBody LoginDto loginDto) {
-        String studentId = loginDto.studentId() == null ? "" : loginDto.studentId().trim();
-        if (studentId.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Student ID is required."));
+        String identifier = loginDto.studentId() == null ? "" : loginDto.studentId().trim();
+        if (identifier.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Student ID or email is required."));
         }
 
-        Optional<User> userOpt = userRepository.findByStudentId(studentId);
+        // If the identifier looks like an email, look up by email (admin login path)
+        Optional<User> userOpt = identifier.contains("@")
+                ? userRepository.findByEmail(identifier)
+                : userRepository.findByStudentId(identifier);
+
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid Student ID or password"));
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
 
         User user = userOpt.get();
         String hash = user.getPassword();
         if (hash == null || hash.isBlank()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid Student ID or password"));
+            if ("GOOGLE".equals(user.getAuthProvider())) {
+                return ResponseEntity.status(401).body(
+                        Map.of("error", "This account uses Google Sign-In. Use Google login or complete profile setup."));
+            }
+            return ResponseEntity.status(401).body(Map.of("error", "Password is not set for this account"));
         }
 
         String candidate = loginDto.password() == null ? "" : loginDto.password();
         if (!passwordEncoder.matches(candidate, hash)) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid Student ID or password"));
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
 
         try {

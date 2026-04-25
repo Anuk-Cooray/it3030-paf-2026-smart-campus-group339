@@ -1,188 +1,116 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../AuthContext.jsx'
-import { http } from '../api/http.js'
-
-const EMPTY_FORM = {
-  category: '',
-  resourceLocation: '',
-  description: '',
-  priority: 'MEDIUM',
-  contactDetails: '',
-}
+import { useState } from 'react'
+import TicketForm from '../components/tickets/TicketForm'
+import TicketList from '../components/tickets/TicketList'
 
 export default function Tickets() {
-  const { token } = useAuth()
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [attachments, setAttachments] = useState([])
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  async function loadMine() {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await http.get('/api/tickets', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      setItems(Array.isArray(res.data) ? res.data : [])
-    } catch (e) {
-      setError(e?.response?.data?.error || e?.response?.data || e?.message || String(e))
-    } finally {
-      setLoading(false)
-    }
+  const handleTicketCreated = () => {
+    setRefreshTrigger((prev) => prev + 1)
   }
-
-  useEffect(() => {
-    if (!token) return
-    loadMine()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
-
-  async function handleFiles(e) {
-    const files = Array.from(e.target.files || [])
-    if (files.length > 3) {
-      setError('You can upload a maximum of 3 images.')
-      return
-    }
-    const base64s = await Promise.all(
-      files.map(
-        (f) =>
-          new Promise((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(reader.result)
-            reader.onerror = reject
-            reader.readAsDataURL(f)
-          }),
-      ),
-    )
-    setAttachments(base64s.filter((x) => typeof x === 'string'))
-  }
-
-  async function submit(e) {
-    e.preventDefault()
-    setError(null)
-    setSuccess(false)
-    try {
-      const payload = {
-        category: form.category.trim(),
-        resourceLocation: form.resourceLocation.trim(),
-        description: form.description.trim(),
-        priority: form.priority,
-        contactDetails: form.contactDetails.trim(),
-        imageAttachments: attachments,
-      }
-      const res = await http.post('/api/tickets', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      setItems((prev) => [res.data, ...prev])
-      setForm(EMPTY_FORM)
-      setAttachments([])
-      setSuccess(true)
-    } catch (e2) {
-      setError(e2?.response?.data?.error || e2?.response?.data || e2?.message || String(e2))
-    }
-  }
-
-  const cards = useMemo(() => items, [items])
 
   return (
-    <div>
-      <div style={card}>
-        <h2 style={h2}>Report Maintenance / Incident Ticket</h2>
-        <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
-          <input
-            required
-            placeholder="Category (Electrical, Plumbing, Safety...)"
-            value={form.category}
-            onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-            style={input}
-          />
-          <input
-            required
-            placeholder="Resource Location"
-            value={form.resourceLocation}
-            onChange={(e) => setForm((p) => ({ ...p, resourceLocation: e.target.value }))}
-            style={input}
-          />
-          <textarea
-            required
-            placeholder="Describe the issue..."
-            value={form.description}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-            style={textarea}
-          />
-          <select value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))} style={input}>
-            <option value="LOW">LOW</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="HIGH">HIGH</option>
-          </select>
-          <input
-            required
-            placeholder="Contact details"
-            value={form.contactDetails}
-            onChange={(e) => setForm((p) => ({ ...p, contactDetails: e.target.value }))}
-            style={input}
-          />
-          <input type="file" multiple accept="image/*" onChange={handleFiles} />
-          <div style={{ fontSize: 12, color: '#64748b' }}>Maximum 3 images. Selected: {attachments.length}</div>
-          <button type="submit" style={primaryBtn}>
-            Submit Ticket
-          </button>
-        </form>
-        {error ? <div style={errorBox}>{String(error)}</div> : null}
-        {success ? <div style={okBox}>Ticket created successfully.</div> : null}
-      </div>
-
-      <div style={{ ...card, marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>My Tickets</h3>
-        {loading ? <p style={p}>Loading...</p> : null}
-        <div style={{ display: 'grid', gap: 10 }}>
-          {cards.map((t) => (
-            <div key={t.id} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                <strong>{t.category}</strong>
-                <span style={statusStyle(t.status)}>{t.status}</span>
-              </div>
-              <div style={{ color: '#334155', marginTop: 6 }}>{t.description}</div>
-              <div style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>
-                {t.resourceLocation} · {t.priority} · {t.createdAt ? String(t.createdAt) : ''}
-              </div>
-            </div>
-          ))}
-          {!loading && cards.length === 0 ? <p style={p}>No tickets submitted yet.</p> : null}
+    <div style={pageContainer}>
+      <div style={headerCard}>
+        <div style={headerGlowOne} />
+        <div style={headerGlowTwo} />
+        <div style={headerGlowThree} />
+        <div style={headerContent}>
+          <h1 style={h1}>Maintenance Tickets</h1>
+          <p style={headerP}>
+            Report and track facility maintenance issues across campus locations
+          </p>
         </div>
       </div>
+
+      <TicketForm onTicketCreated={handleTicketCreated} />
+      <TicketList refreshTrigger={refreshTrigger} />
     </div>
   )
 }
 
-const card = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
-  borderRadius: 12,
-  padding: 18,
-  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+const pageContainer = {
+  maxWidth: 1200,
+  margin: '0 auto',
+  padding: '16px',
 }
-const h2 = { margin: 0, marginBottom: 8, color: '#111827' }
-const p = { margin: 0, color: '#4b5563', lineHeight: 1.5 }
-const input = { border: '1px solid #cbd5e1', borderRadius: 8, padding: '9px 10px', fontSize: 14, background: '#fff' }
-const textarea = { ...input, minHeight: 95, resize: 'vertical' }
-const primaryBtn = {
-  border: 'none',
-  borderRadius: 8,
-  background: '#2563eb',
-  color: '#fff',
-  fontWeight: 700,
-  padding: '9px 14px',
-  cursor: 'pointer',
+
+const headerCard = {
+  background:
+    'linear-gradient(128deg, rgba(8, 47, 73, 0.98) 0%, rgba(15, 23, 42, 0.97) 38%, rgba(30, 58, 138, 0.96) 72%, rgba(37, 99, 235, 0.95) 100%)',
+  backgroundImage:
+    'radial-gradient(circle at 12% 18%, rgba(125, 211, 252, 0.28) 0%, rgba(125, 211, 252, 0) 36%), radial-gradient(circle at 82% 78%, rgba(147, 197, 253, 0.22) 0%, rgba(147, 197, 253, 0) 40%), linear-gradient(128deg, rgba(8, 47, 73, 0.98) 0%, rgba(15, 23, 42, 0.97) 38%, rgba(30, 58, 138, 0.96) 72%, rgba(37, 99, 235, 0.95) 100%)',
+  color: 'white',
+  borderRadius: 16,
+  padding: 40,
+  marginBottom: 28,
+  boxShadow: '0 16px 34px rgba(15, 23, 42, 0.42)',
+  position: 'relative',
+  overflow: 'hidden',
 }
-const errorBox = { marginTop: 10, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', padding: 10, borderRadius: 8 }
-const okBox = { marginTop: 10, color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: 10, borderRadius: 8 }
-function statusStyle(status) {
-  if (status === 'OPEN') return { color: '#a16207', background: '#fffbeb', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }
-  if (status === 'IN_PROGRESS') return { color: '#1d4ed8', background: '#eff6ff', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }
-  if (status === 'RESOLVED' || status === 'CLOSED') return { color: '#047857', background: '#ecfdf5', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }
-  return { color: '#be123c', background: '#fff1f2', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }
+
+const headerContent = {
+  position: 'relative',
+  zIndex: 2,
+  textAlign: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+}
+
+const headerGlowOne = {
+  position: 'absolute',
+  width: 360,
+  height: 360,
+  borderRadius: '50%',
+  top: -170,
+  left: -80,
+  background: 'rgba(125, 211, 252, 0.34)',
+  filter: 'blur(64px)',
+  zIndex: 0,
+}
+
+const headerGlowTwo = {
+  position: 'absolute',
+  width: 300,
+  height: 300,
+  borderRadius: '50%',
+  bottom: -160,
+  right: -30,
+  background: 'rgba(96, 165, 250, 0.32)',
+  filter: 'blur(58px)',
+  zIndex: 0,
+}
+
+const headerGlowThree = {
+  position: 'absolute',
+  width: 240,
+  height: 240,
+  borderRadius: '50%',
+  top: 40,
+  right: 240,
+  background: 'rgba(191, 219, 254, 0.22)',
+  filter: 'blur(52px)',
+  zIndex: 0,
+}
+
+const h1 = {
+  margin: '0 0 12px 0',
+  fontSize: 36,
+  fontWeight: 800,
+  letterSpacing: '-0.5px',
+  position: 'relative',
+  zIndex: 2,
+  textAlign: 'center',
+}
+
+const headerP = {
+  margin: 0,
+  fontSize: 16,
+  opacity: 0.95,
+  lineHeight: 1.6,
+  fontWeight: 500,
+  position: 'relative',
+  zIndex: 2,
+  textAlign: 'center',
 }

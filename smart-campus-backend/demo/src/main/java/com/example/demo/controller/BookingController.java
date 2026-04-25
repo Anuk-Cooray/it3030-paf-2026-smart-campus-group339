@@ -1,18 +1,27 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.BookingRequest;
+import com.example.demo.dto.BookingStatusUpdateRequest;
 import com.example.demo.model.Booking;
-import com.example.demo.model.Booking.Status;
-import com.example.demo.repository.BookingRepository;
+import com.example.demo.model.User;
+import com.example.demo.repository.UserRepository;
 import com.example.demo.service.BookingService;
-import com.example.demo.service.NotificationService;
-import java.time.format.DateTimeFormatter;
+import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,87 +29,112 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/bookings")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
+@RequiredArgsConstructor
 public class BookingController {
 
-    private final BookingRepository bookingRepository;
     private final BookingService bookingService;
-    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
-    public BookingController(
-            BookingRepository bookingRepository,
-            BookingService bookingService,
-            NotificationService notificationService) {
-        this.bookingRepository = bookingRepository;
-        this.bookingService = bookingService;
-        this.notificationService = notificationService;
+    private User getUserFromPrincipal(Object principal) {
+        String email;
+        if (principal instanceof Jwt jwt) {
+            email = jwt.getClaimAsString("email");
+        } else {
+            email = principal.toString();
+        }
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
     }
 
     @GetMapping
-    public List<Booking> list(@RequestParam(required = false) String status) {
-        if (status == null || status.isBlank()) {
-            return bookingRepository.findAll();
+    public ResponseEntity<List<Booking>> getBookings(
+            @AuthenticationPrincipal Object principal,
+            @RequestParam(required = false) String status) {
+        User user = getUserFromPrincipal(principal);
+        return ResponseEntity.ok(bookingService.getBookingsForUser(user, status));
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createBooking(
+            @AuthenticationPrincipal Object principal,
+            @Valid @RequestBody BookingRequest request) {
+        User user = getUserFromPrincipal(principal);
+        try {
+            Booking booking = bookingService.createBooking(user, request);
+            return ResponseEntity.ok(booking);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-        Status parsed = Status.valueOf(status.trim().toUpperCase());
-        return bookingRepository.findByStatus(parsed);
     }
 
-    @PatchMapping("/{id}/approve")
-    public ResponseEntity<?> approve(@PathVariable Long id) {
-        return bookingRepository
-                .findById(id)
-                .map(
-                        booking -> {
-                            if (bookingService.isConflict(booking)) {
-                                return ResponseEntity.badRequest().body(Map.of("error", "Schedule Conflict"));
-                            }
-
-                            booking.setStatus(Status.APPROVED);
-                            booking.setRejectionReason(null);
-                            bookingRepository.save(booking);
-                            notificationService.sendNotification(
-                                    String.valueOf(booking.getUserId()),
-                                    "Your booking for "
-                                            + booking.getResourceId()
-                                            + " on "
-                                            + formatBookingDate(booking)
-                                            + " has been APPROVED.");
-                            return ResponseEntity.ok(booking);
-                        })
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @PatchMapping("/{id}/reject")
-    public ResponseEntity<?> reject(@PathVariable Long id, @RequestBody Map<String, String> payload) {
-        return bookingRepository
-                .findById(id)
-                .map(
-                        booking -> {
-                            String reason = payload == null ? null : payload.get("rejectionReason");
-                            booking.setStatus(Status.REJECTED);
-                            booking.setRejectionReason(reason == null ? "" : reason.trim());
-                            bookingRepository.save(booking);
-                            String adminReason =
-                                    booking.getRejectionReason().isBlank()
-                                            ? "No reason provided"
-                                            : booking.getRejectionReason();
-                            notificationService.sendNotification(
-                                    String.valueOf(booking.getUserId()),
-                                    "Your booking for "
-                                            + booking.getResourceId()
-                                            + " on "
-                                            + formatBookingDate(booking)
-                                            + " was REJECTED. Reason: "
-                                            + adminReason);
-                            return ResponseEntity.ok(booking);
-                        })
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    private static String formatBookingDate(Booking booking) {
-        if (booking.getStartTime() == null) {
-            return "the selected date";
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateBookingStatus(
+            @AuthenticationPrincipal Object principal,
+            @PathVariable Long id,
+            @Valid @RequestBody BookingStatusUpdateRequest request) {
+        User user = getUserFromPrincipal(principal);
+        try {
+            Booking booking =
+                    bookingService.updateBookingStatus(id, user, request.getStatus(), request.getAdminReason());
+            return ResponseEntity.ok(booking);
+        } catch (IllegalArgumentException | IllegalStateException | SecurityException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-        return booking.getStartTime().format(DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteBooking(@AuthenticationPrincipal Object principal, @PathVariable Long id) {
+        User user = getUserFromPrincipal(principal);
+        try {
+            bookingService.deleteBooking(id, user);
+            return ResponseEntity.ok(Map.of("message", "Booking deleted successfully."));
+        } catch (IllegalArgumentException | IllegalStateException | SecurityException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/availability")
+    public ResponseEntity<?> getAvailability(
+            @RequestParam String resource,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        try {
+            return ResponseEntity.ok(bookingService.getWeeklyAvailability(resource, weekStart));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/export/csv")
+    public ResponseEntity<String> exportCsv(
+            @AuthenticationPrincipal Object principal,
+            @RequestParam(defaultValue = "ALL") String status) {
+        User user = getUserFromPrincipal(principal);
+        if (!"ROLE_ADMIN".equals(user.getRole())) {
+            return ResponseEntity.status(403).body("Admin only.");
+        }
+        String csv = bookingService.exportToCsv(status);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bookings.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csv);
+    }
+
+    @GetMapping("/export/pdf")
+    public ResponseEntity<byte[]> exportPdf(
+            @AuthenticationPrincipal Object principal,
+            @RequestParam(defaultValue = "ALL") String status) {
+        User user = getUserFromPrincipal(principal);
+        if (!"ROLE_ADMIN".equals(user.getRole())) {
+            return ResponseEntity.status(403).build();
+        }
+        try {
+            byte[] pdf = bookingService.exportToPdf(status);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bookings.pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

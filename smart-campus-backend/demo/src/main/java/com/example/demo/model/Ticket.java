@@ -1,62 +1,67 @@
 package com.example.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Data;
 
 @Entity
 @Data
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @Table(name = "tickets")
 public class Ticket {
-
-    public enum Priority {
-        LOW,
-        MEDIUM,
-        HIGH
-    }
-
-    public enum Status {
-        OPEN,
-        IN_PROGRESS,
-        RESOLVED,
-        CLOSED,
-        REJECTED
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userId;
-    private String userName;
-    private String resourceLocation;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    private User user;
+
+    @Column(nullable = false)
+    private String resource;
+
+    @Column(nullable = false)
+    private String location;
+
+    @Column(nullable = false)
     private String category;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Enumerated(EnumType.STRING)
-    private Priority priority = Priority.MEDIUM;
+    @Column(nullable = false)
+    private String priority;
+
+    @Column(name = "contact_details")
     private String contactDetails;
 
-    @Enumerated(EnumType.STRING)
-    private Status status = Status.OPEN;
-    private String assignedTech;
-    private String resolutionNotes;
+    @Column(name = "attachment_1", columnDefinition = "LONGTEXT")
+    private String attachment1;
+
+    @Column(name = "attachment_2", columnDefinition = "LONGTEXT")
+    private String attachment2;
+
+    @Column(name = "attachment_3", columnDefinition = "LONGTEXT")
+    private String attachment3;
+
+    @Column(name = "status")
+    private String status = "OPEN";
+
+    @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @ElementCollection
-    @CollectionTable(name = "ticket_image_attachments", joinColumns = @JoinColumn(name = "ticket_id"))
-    private List<String> imageAttachments = new ArrayList<>();
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }
