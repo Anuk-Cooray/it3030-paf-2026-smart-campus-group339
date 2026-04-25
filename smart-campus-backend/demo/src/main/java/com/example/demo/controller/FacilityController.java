@@ -50,7 +50,7 @@ public class FacilityController {
     public ResponseEntity<FacilityDto> createFacility(@Valid @RequestBody CreateFacilityDto dto) {
         try {
             validateAvailabilityWindows(dto.availabilityWindows());
-       
+        } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().build();
         }
 
