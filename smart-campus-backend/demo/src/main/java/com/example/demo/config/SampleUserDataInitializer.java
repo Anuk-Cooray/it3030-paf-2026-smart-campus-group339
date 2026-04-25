@@ -23,12 +23,24 @@ public class SampleUserDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // Sample login users for role testing:
+        // - Admin: admin@sliit.lk / Admin@123
+        // - Staff: staff@sliit.lk / Staff@1234
+        // - User: user1@sliit.lk / User@1234
+        // - User: user2@sliit.lk / User@1234
         ensureUser(
                 "admin@sliit.lk",
                 "Campus Admin",
                 "ROLE_ADMIN",
                 "ITADMIN01",
                 "Admin@123");
+
+        ensureUser(
+                "staff@sliit.lk",
+                "Campus Staff",
+                "ROLE_STAFF",
+                "ITSTAFF01",
+                "Staff@1234");
 
         ensureUser(
                 "user1@sliit.lk",
@@ -44,15 +56,13 @@ public class SampleUserDataInitializer implements CommandLineRunner {
                 "ITUSER002",
                 "User@1234");
 
-
-                
-    // MY ACCOUNT - ADD 
-    ensureUser(
-            "it23322462@my.sliit.lk",
-            "Dileshani",
-            "ROLE_USER",
-            "IT23322462",
-            "Dileshani2001");
+        // Developer/own account for quick login
+        ensureUser(
+                "it23322462@my.sliit.lk",
+                "Dileshani",
+                "ROLE_USER",
+                "IT23322462",
+                "Dileshani2001");
     }
 
     private void ensureUser(String email, String name, String role, String studentId, String rawPassword) {
