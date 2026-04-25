@@ -37,23 +37,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/facilities")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
-public class FacilityController {
 
     private final FacilityRepository facilityRepository;
 
-    public FacilityController(FacilityRepository facilityRepository) {
+   
         this.facilityRepository = facilityRepository;
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<FacilityDto> createFacility(@Valid @RequestBody CreateFacilityDto dto) {
-        try {
-            validateAvailabilityWindows(dto.availabilityWindows());
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().build();
-        }
-
+  
         Facility facility = new Facility();
         applyDto(facility, dto.name(), dto.type(), dto.capacity(), dto.location(), dto.status(), dto.availabilityWindows());
         Facility saved = facilityRepository.save(facility);
@@ -61,7 +54,7 @@ public class FacilityController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<FacilityDto>> listFacilities(
+  
             @RequestParam(required = false) FacilityType type,
             @RequestParam(required = false) Integer capacity,
             @RequestParam(required = false) Integer minCapacity,
@@ -77,24 +70,24 @@ public class FacilityController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FacilityDto> getFacility(@PathVariable Long id) {
+  
         return facilityRepository.findById(id).map(facility -> ResponseEntity.ok(toDto(facility))).orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<FacilityDto> updateFacility(@PathVariable Long id, @Valid @RequestBody UpdateFacilityDto dto) {
-        try {
+    
+      
             validateAvailabilityWindows(dto.availabilityWindows());
-        } catch (IllegalArgumentException ex) {
+        
             return ResponseEntity.badRequest().build();
         }
 
         return facilityRepository
                 .findById(id)
                 .map(
-                        facility -> {
+         
                             applyDto(
                                     facility,
                                     dto.name(),
@@ -114,14 +107,11 @@ public class FacilityController {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<FacilityDto> updateStatus(@PathVariable Long id, @RequestBody StatusUpdateDto dto) {
-        if (dto == null || dto.status() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
+       
         return facilityRepository
                 .findById(id)
                 .map(
-                        facility -> {
+                       
                             facility.setStatus(dto.status());
                             facility.setUpdatedAt(LocalDateTime.now());
                             Facility saved = facilityRepository.save(facility);
@@ -133,43 +123,20 @@ public class FacilityController {
     @DeleteMapping("/{id}")
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<Void> deleteFacility(@PathVariable Long id) {
-        return facilityRepository
-                .findById(id)
-                .map(
-                        facility -> {
-                            facilityRepository.delete(facility);
-                            return ResponseEntity.noContent().<Void>build();
-                        })
-                .orElse(ResponseEntity.notFound().build());
-    }
+   
 
-    private static Specification<Facility> buildSpecification(
+   
             FacilityType type, Integer capacity, Integer minCapacity, String location, FacilityStatus status) {
         Specification<Facility> specification = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
 
-        if (type != null) {
-            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("type"), type));
-        }
-        if (capacity != null) {
-            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("capacity"), capacity));
-        }
-        if (minCapacity != null) {
-            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.greaterThanOrEqualTo(root.get("capacity"), minCapacity));
-        }
-        if (location != null && !location.isBlank()) {
+       
             String normalizedLocation = "%" + location.trim().toLowerCase() + "%";
             specification = specification.and(
                     (root, query, criteriaBuilder) -> criteriaBuilder.like(criteriaBuilder.lower(root.get("location")), normalizedLocation));
         }
-        if (status != null) {
-            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), status));
-        }
+        
 
-        return specification;
-    }
-
-    private static void applyDto(
+    
             Facility facility,
             String name,
             FacilityType type,
@@ -184,24 +151,16 @@ public class FacilityController {
         facility.setStatus(status == null ? FacilityStatus.ACTIVE : status);
         facility.setAvailabilityWindows(mapWindows(availabilityWindows));
         facility.setUpdatedAt(LocalDateTime.now());
-        if (facility.getCreatedAt() == null) {
+ 
             facility.setCreatedAt(LocalDateTime.now());
         }
     }
 
-    private static List<FacilityAvailabilityWindow> mapWindows(List<FacilityAvailabilityWindowDto> availabilityWindows) {
+   
         List<FacilityAvailabilityWindow> windows = new ArrayList<>();
-        for (FacilityAvailabilityWindowDto dto : availabilityWindows) {
-            FacilityAvailabilityWindow window = new FacilityAvailabilityWindow();
-            window.setDayOfWeek(dto.dayOfWeek());
-            window.setStartTime(dto.startTime());
-            window.setEndTime(dto.endTime());
-            windows.add(window);
-        }
-        return windows;
-    }
+       
 
-    private static FacilityDto toDto(Facility facility) {
+  
         List<FacilityAvailabilityWindowDto> windows = new ArrayList<>();
         for (FacilityAvailabilityWindow window : facility.getAvailabilityWindows()) {
             windows.add(new FacilityAvailabilityWindowDto(window.getDayOfWeek(), window.getStartTime(), window.getEndTime()));
@@ -219,12 +178,12 @@ public class FacilityController {
                 facility.getUpdatedAt());
     }
 
-    private static void validateAvailabilityWindows(List<FacilityAvailabilityWindowDto> availabilityWindows) {
+    
         if (availabilityWindows == null || availabilityWindows.isEmpty()) {
             throw new IllegalArgumentException("At least one availability window is required");
         }
 
-        for (FacilityAvailabilityWindowDto dto : availabilityWindows) {
+ 
             if (dto.dayOfWeek() == null || dto.startTime() == null || dto.endTime() == null) {
                 throw new IllegalArgumentException("Availability windows must include day, start time, and end time");
             }
