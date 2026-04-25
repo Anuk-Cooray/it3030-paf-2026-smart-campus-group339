@@ -48,7 +48,7 @@ public class FacilityController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<FacilityDto> createFacility(@Valid @RequestBody CreateFacilityDto dto) {
-      
+        try {
             validateAvailabilityWindows(dto.availabilityWindows());
        
             return ResponseEntity.badRequest().build();
