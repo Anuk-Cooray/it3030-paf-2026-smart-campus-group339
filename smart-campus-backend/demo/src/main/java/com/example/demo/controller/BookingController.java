@@ -2,13 +2,10 @@ package com.example.demo.controller;
 
 import com.example.demo.model.Booking;
 import com.example.demo.model.Booking.Status;
-import com.example.demo.model.Notification;
-import com.example.demo.model.User;
 import com.example.demo.repository.BookingRepository;
-import com.example.demo.repository.NotificationRepository;
-import com.example.demo.repository.UserRepository;
 import com.example.demo.service.BookingService;
-import java.time.LocalDateTime;
+import com.example.demo.service.NotificationService;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -28,18 +25,15 @@ public class BookingController {
 
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
-    private final NotificationRepository notificationRepository;
-    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public BookingController(
             BookingRepository bookingRepository,
             BookingService bookingService,
-            NotificationRepository notificationRepository,
-            UserRepository userRepository) {
+            NotificationService notificationService) {
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
-        this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @GetMapping
@@ -64,11 +58,13 @@ public class BookingController {
                             booking.setStatus(Status.APPROVED);
                             booking.setRejectionReason(null);
                             bookingRepository.save(booking);
-                            notifyUser(
-                                    booking.getUserId(),
-                                    "Your booking request for resource "
+                            notificationService.sendNotification(
+                                    String.valueOf(booking.getUserId()),
+                                    "Your booking for "
                                             + booking.getResourceId()
-                                            + " was approved.");
+                                            + " on "
+                                            + formatBookingDate(booking)
+                                            + " has been APPROVED.");
                             return ResponseEntity.ok(booking);
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -84,28 +80,27 @@ public class BookingController {
                             booking.setStatus(Status.REJECTED);
                             booking.setRejectionReason(reason == null ? "" : reason.trim());
                             bookingRepository.save(booking);
-                            notifyUser(
-                                    booking.getUserId(),
-                                    "Your booking request for resource "
+                            String adminReason =
+                                    booking.getRejectionReason().isBlank()
+                                            ? "No reason provided"
+                                            : booking.getRejectionReason();
+                            notificationService.sendNotification(
+                                    String.valueOf(booking.getUserId()),
+                                    "Your booking for "
                                             + booking.getResourceId()
-                                            + " was rejected."
-                                            + (booking.getRejectionReason().isBlank()
-                                                    ? ""
-                                                    : " Reason: " + booking.getRejectionReason()));
+                                            + " on "
+                                            + formatBookingDate(booking)
+                                            + " was REJECTED. Reason: "
+                                            + adminReason);
                             return ResponseEntity.ok(booking);
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private void notifyUser(Long userId, String message) {
-        if (userId == null) return;
-        Notification n = new Notification();
-        User user = userRepository.findById(userId).orElse(null);
-        if (user == null) return;
-        n.setUser(user);
-        n.setMessage(message);
-        n.setRead(false);
-        n.setCreatedAt(LocalDateTime.now());
-        notificationRepository.save(n);
+    private static String formatBookingDate(Booking booking) {
+        if (booking.getStartTime() == null) {
+            return "the selected date";
+        }
+        return booking.getStartTime().format(DateTimeFormatter.ISO_LOCAL_DATE);
     }
 }
