@@ -84,7 +84,7 @@ public class FacilityController {
     @PutMapping("/{id}")
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    
+    public ResponseEntity<FacilityDto> updateFacility(@PathVariable Long id, @Valid @RequestBody UpdateFacilityDto dto) {
       
             validateAvailabilityWindows(dto.availabilityWindows());
         
