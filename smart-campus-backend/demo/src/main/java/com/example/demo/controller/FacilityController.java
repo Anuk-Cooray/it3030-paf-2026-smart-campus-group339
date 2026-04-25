@@ -157,7 +157,7 @@ public class FacilityController {
         if (minCapacity != null) {
             specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.greaterThanOrEqualTo(root.get("capacity"), minCapacity));
         }
-       
+        if (location != null && !location.isBlank()) {
             String normalizedLocation = "%" + location.trim().toLowerCase() + "%";
             specification = specification.and(
                     (root, query, criteriaBuilder) -> criteriaBuilder.like(criteriaBuilder.lower(root.get("location")), normalizedLocation));
