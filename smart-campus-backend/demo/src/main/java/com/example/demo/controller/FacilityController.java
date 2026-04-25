@@ -224,7 +224,7 @@ public class FacilityController {
             throw new IllegalArgumentException("At least one availability window is required");
         }
 
- 
+        for (FacilityAvailabilityWindowDto dto : availabilityWindows) {
             if (dto.dayOfWeek() == null || dto.startTime() == null || dto.endTime() == null) {
                 throw new IllegalArgumentException("Availability windows must include day, start time, and end time");
             }
