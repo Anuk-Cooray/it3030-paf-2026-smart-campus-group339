@@ -162,7 +162,12 @@ public class FacilityController {
             specification = specification.and(
                     (root, query, criteriaBuilder) -> criteriaBuilder.like(criteriaBuilder.lower(root.get("location")), normalizedLocation));
         }
-        
+        if (status != null) {
+            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), status));
+        }
+
+        return specification;
+    }
 
     
             Facility facility,
