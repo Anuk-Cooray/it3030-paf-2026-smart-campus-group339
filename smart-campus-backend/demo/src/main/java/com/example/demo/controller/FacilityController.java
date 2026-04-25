@@ -61,7 +61,7 @@ public class FacilityController {
     }
 
     @GetMapping
-  
+    public ResponseEntity<Page<FacilityDto>> listFacilities(
             @RequestParam(required = false) FacilityType type,
             @RequestParam(required = false) Integer capacity,
             @RequestParam(required = false) Integer minCapacity,
