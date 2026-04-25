@@ -189,7 +189,7 @@ public class FacilityController {
         }
     }
 
-   
+    private static List<FacilityAvailabilityWindow> mapWindows(List<FacilityAvailabilityWindowDto> availabilityWindows) {
         List<FacilityAvailabilityWindow> windows = new ArrayList<>();
        
 
