@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
-public record CreateFacilityDto(
+
         @NotBlank String name,
         @NotNull FacilityType type,
         @NotNull @Min(1) Integer capacity,
