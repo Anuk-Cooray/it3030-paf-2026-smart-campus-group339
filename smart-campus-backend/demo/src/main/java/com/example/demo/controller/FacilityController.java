@@ -47,7 +47,13 @@ public class FacilityController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-  
+    public ResponseEntity<FacilityDto> createFacility(@Valid @RequestBody CreateFacilityDto dto) {
+      
+            validateAvailabilityWindows(dto.availabilityWindows());
+       
+            return ResponseEntity.badRequest().build();
+        }
+
         Facility facility = new Facility();
         applyDto(facility, dto.name(), dto.type(), dto.capacity(), dto.location(), dto.status(), dto.availabilityWindows());
         Facility saved = facilityRepository.save(facility);
