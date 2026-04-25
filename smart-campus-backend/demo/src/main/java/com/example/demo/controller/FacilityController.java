@@ -94,7 +94,7 @@ public class FacilityController {
         return facilityRepository
                 .findById(id)
                 .map(
-         
+                        facility -> {
                             applyDto(
                                     facility,
                                     dto.name(),
