@@ -33,6 +33,7 @@ export function NotificationBell() {
   const unreadCount = useMemo(() => items.filter((n) => !n.read).length, [items])
 
   async function refresh() {
+    if (!tokenRef.current) return   // no token yet — skip silently
     setError(null)
     setLoading(true)
     try {

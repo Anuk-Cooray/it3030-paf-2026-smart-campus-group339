@@ -5,12 +5,17 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
 
@@ -26,14 +31,29 @@ public class Facility {
 
     @Column(nullable = false)
     private String name;
-    private String type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private FacilityType type;
+
+    @Column(nullable = false)
     private Integer capacity;
+
+    @Column(nullable = false)
     private String location;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private FacilityStatus status = FacilityStatus.ACTIVE;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "facility_availability_windows", joinColumns = @JoinColumn(name = "facility_id"))
-    @Column(name = "availability_window")
-    private List<String> availabilityWindows;
+    @OrderColumn(name = "window_order")
+    private List<FacilityAvailabilityWindow> availabilityWindows = new ArrayList<>();
 
-    private String status;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }
