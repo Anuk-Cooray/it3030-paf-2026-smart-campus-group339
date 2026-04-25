@@ -4,14 +4,7 @@ import {
   fetchBookings, createBooking, updateBookingStatus,
   deleteBooking, fetchAvailability, exportBookingsCsv
 } from '../api/bookingsApi'
-
-const RESOURCES = [
-  'Main Auditorium',
-  'Computer Lab 1',
-  'Computer Lab 2',
-  'Library Study Room A',
-  'Conference Hall'
-]
+import { fetchFacilities } from '../api/facilitiesApi'
 
 // Get Monday of the week for a given date
 function getWeekStart(date = new Date()) {
@@ -28,8 +21,11 @@ export default function Bookings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Live resources from the facilities API (ACTIVE only)
+  const [resources, setResources] = useState([])
+
   // Form state
-  const [resourceName, setResourceName] = useState(RESOURCES[0])
+  const [resourceName, setResourceName] = useState('')
   const [bookingDate, setBookingDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -45,7 +41,7 @@ export default function Bookings() {
 
   // Feature 1: Heatmap state
   const [showHeatmap, setShowHeatmap] = useState(false)
-  const [heatmapResource, setHeatmapResource] = useState(RESOURCES[0])
+  const [heatmapResource, setHeatmapResource] = useState('')
   const [heatmapWeekStart, setHeatmapWeekStart] = useState(getWeekStart())
   const [heatmapData, setHeatmapData] = useState(null)
   const [heatmapLoading, setHeatmapLoading] = useState(false)
@@ -71,6 +67,22 @@ export default function Bookings() {
   }
 
   useEffect(() => { loadBookings() }, [])
+
+  // Load active facilities to populate resource dropdowns
+  useEffect(() => {
+    fetchFacilities({ status: 'ACTIVE', size: 200 })
+      .then((page) => {
+        const names = (page?.content ?? []).map((f) => f.name)
+        setResources(names)
+        if (names.length > 0) {
+          setResourceName(names[0])
+          setHeatmapResource(names[0])
+        }
+      })
+      .catch(() => {
+        // Fall back to empty — user can still type or select nothing
+      })
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -221,7 +233,9 @@ export default function Bookings() {
               <div style={styles.formGroup}>
                 <label style={styles.label}>Resource</label>
                 <select style={styles.input} value={heatmapResource} onChange={e => setHeatmapResource(e.target.value)}>
-                  {RESOURCES.map(r => <option key={r} value={r}>{r}</option>)}
+                  {resources.length === 0
+                    ? <option value="">No facilities available</option>
+                    : resources.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
               <div style={styles.formGroup}>
@@ -310,7 +324,9 @@ export default function Bookings() {
               <div style={styles.formGroup}>
                 <label style={styles.label}>Resource</label>
                 <select style={styles.input} value={resourceName} onChange={e => setResourceName(e.target.value)} required>
-                  {RESOURCES.map(r => <option key={r} value={r}>{r}</option>)}
+                  {resources.length === 0
+                    ? <option value="">Loading facilities…</option>
+                    : resources.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
               <div style={styles.formGroup}>
