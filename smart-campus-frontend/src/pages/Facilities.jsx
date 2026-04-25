@@ -22,7 +22,61 @@ const INITIAL_FILTERS = {
   size: DEFAULT_PAGE_SIZE,
 }
 
+export default function Facilities() {
+  const { user } = useAuth()
+  const canManage = useMemo(() => ['ROLE_ADMIN', 'ROLE_STAFF'].includes(user?.role), [user?.role])
 
+  const [filters, setFilters] = useState(INITIAL_FILTERS)
+  const [facilities, setFacilities] = useState([])
+  const [pagination, setPagination] = useState({
+    page: 0,
+    size: DEFAULT_PAGE_SIZE,
+    totalPages: 0,
+    totalElements: 0,
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [selectedFacility, setSelectedFacility] = useState(null)
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  useEffect(() => {
+    const loadFacilities = async () => {
+      setLoading(true)
+      setError('')
+
+      try {
+        const params = {
+          page: filters.page,
+          size: filters.size,
+        }
+
+        if (filters.type) params.type = filters.type
+        if (filters.status) params.status = filters.status
+        if (filters.location.trim()) params.location = filters.location.trim()
+        if (filters.capacity) params.capacity = Number(filters.capacity)
+        if (filters.minCapacity) params.minCapacity = Number(filters.minCapacity)
+
+        const response = await listFacilities(params)
+        setFacilities(response?.content || [])
+        setPagination({
+          page: response?.number ?? 0,
+          size: response?.size ?? filters.size,
+          totalPages: response?.totalPages ?? 0,
+          totalElements: response?.totalElements ?? 0,
+        })
+      } catch (fetchError) {
+        setError(getErrorMessage(fetchError))
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadFacilities()
+  }, [filters, refreshTick])
+
+ 
 
 
 const spacer = { height: 2 }
