@@ -41,7 +41,7 @@ public class FacilityController {
 
     private final FacilityRepository facilityRepository;
 
-   
+    public FacilityController(FacilityRepository facilityRepository) {
         this.facilityRepository = facilityRepository;
     }
 
