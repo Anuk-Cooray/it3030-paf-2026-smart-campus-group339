@@ -169,7 +169,7 @@ public class FacilityController {
         return specification;
     }
 
-    
+    private static void applyDto(
             Facility facility,
             String name,
             FacilityType type,
