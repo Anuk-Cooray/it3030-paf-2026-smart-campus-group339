@@ -151,6 +151,9 @@ public class FacilityController {
         if (type != null) {
             specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("type"), type));
         }
+        if (capacity != null) {
+            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("capacity"), capacity));
+        }
        
             String normalizedLocation = "%" + location.trim().toLowerCase() + "%";
             specification = specification.and(
