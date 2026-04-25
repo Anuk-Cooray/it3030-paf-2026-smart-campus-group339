@@ -137,7 +137,7 @@ public class FacilityController {
         return facilityRepository
                 .findById(id)
                 .map(
-      
+                        facility -> {
                             facilityRepository.delete(facility);
                             return ResponseEntity.noContent().<Void>build();
                         })
