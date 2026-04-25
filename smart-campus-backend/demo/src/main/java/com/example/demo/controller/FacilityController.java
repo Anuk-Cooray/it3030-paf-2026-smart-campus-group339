@@ -191,7 +191,15 @@ public class FacilityController {
 
     private static List<FacilityAvailabilityWindow> mapWindows(List<FacilityAvailabilityWindowDto> availabilityWindows) {
         List<FacilityAvailabilityWindow> windows = new ArrayList<>();
-       
+        for (FacilityAvailabilityWindowDto dto : availabilityWindows) {
+            FacilityAvailabilityWindow window = new FacilityAvailabilityWindow();
+            window.setDayOfWeek(dto.dayOfWeek());
+            window.setStartTime(dto.startTime());
+            window.setEndTime(dto.endTime());
+            windows.add(window);
+        }
+        return windows;
+    }
 
   
         List<FacilityAvailabilityWindowDto> windows = new ArrayList<>();
