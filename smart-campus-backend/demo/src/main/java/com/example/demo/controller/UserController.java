@@ -17,7 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" })
 public class UserController {
 
     private final UserRepository userRepository;
@@ -35,10 +35,9 @@ public class UserController {
         }
 
         String email = authentication.getName();
-        User user =
-                userRepository
-                        .findByEmail(email)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        User user = userRepository
+                .findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (dto.name() != null) {
             user.setName(dto.name().trim().isEmpty() ? null : dto.name().trim());

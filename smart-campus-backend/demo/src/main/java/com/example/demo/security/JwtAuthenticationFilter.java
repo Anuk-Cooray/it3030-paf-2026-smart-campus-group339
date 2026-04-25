@@ -43,8 +43,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Always validate Bearer when present. Do not skip when the context already has another
-        // Authentication (e.g. session/OAuth2 from spring-security-oauth2-client); API calls must
+        // Always validate Bearer when present. Do not skip when the context already has
+        // another
+        // Authentication (e.g. session/OAuth2 from spring-security-oauth2-client); API
+        // calls must
         // be authorized by this JWT.
         try {
             SignedJWT jwt = SignedJWT.parse(token);
@@ -63,8 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 role = "ROLE_USER";
             }
 
-            var authorities =
-                    List.of(new SimpleGrantedAuthority(role.startsWith("ROLE_") ? role : "ROLE_" + role));
+            var authorities = List.of(new SimpleGrantedAuthority(role.startsWith("ROLE_") ? role : "ROLE_" + role));
 
             var authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
