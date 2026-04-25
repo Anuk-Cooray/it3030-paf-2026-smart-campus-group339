@@ -25,8 +25,8 @@ export default function Login() {
 
   function routeAfterAuth(data) {
     const role = String(data?.role || '')
-    const adminHome = role === 'ADMIN' || role === 'ROLE_ADMIN'
-    navigate(data.needsProfileSetup ? '/complete-profile' : adminHome ? '/admin/dashboard' : '/app/dashboard')
+    const isAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN'
+    navigate(data.needsProfileSetup ? '/complete-profile' : isAdmin ? '/admin/dashboard' : '/app/dashboard')
   }
 
   const handleGoogleSuccess = async (credentialResponse) => {
@@ -112,9 +112,9 @@ export default function Login() {
         <h1 style={styles.heroTitle}>Smart Campus</h1>
         <p style={styles.heroSubtitle}>Modernizing day-to-day operations.</p>
         <ul style={styles.featureList}>
-          <li>✓ Book facilities and equipment</li>
-          <li>✓ Report maintenance issues</li>
-          <li>✓ Real-time status tracking</li>
+          <li>- Book facilities and equipment</li>
+          <li>- Report maintenance issues</li>
+          <li>- Real-time status tracking</li>
         </ul>
       </div>
 
