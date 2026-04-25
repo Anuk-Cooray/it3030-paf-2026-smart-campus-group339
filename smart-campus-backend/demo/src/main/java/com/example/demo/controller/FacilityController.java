@@ -87,7 +87,7 @@ public class FacilityController {
     public ResponseEntity<FacilityDto> updateFacility(@PathVariable Long id, @Valid @RequestBody UpdateFacilityDto dto) {
         try {
             validateAvailabilityWindows(dto.availabilityWindows());
-        
+        } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().build();
         }
 
