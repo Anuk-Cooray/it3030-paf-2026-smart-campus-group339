@@ -40,9 +40,11 @@ public class BookingController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Booking>> getBookings(@AuthenticationPrincipal Object principal) {
+    public ResponseEntity<List<Booking>> getBookings(
+            @AuthenticationPrincipal Object principal,
+            @RequestParam(required = false) String status) {
         User user = getUserFromPrincipal(principal);
-        return ResponseEntity.ok(bookingService.getBookingsForUser(user));
+        return ResponseEntity.ok(bookingService.getBookingsForUser(user, status));
     }
 
     @PostMapping
@@ -83,8 +85,7 @@ public class BookingController {
         }
     }
 
-    // Feature 1: Heatmap availability endpoint
-    // GET /api/bookings/availability?resource=Main+Auditorium&weekStart=2026-04-21
+    // Feature 1: Heatmap
     @GetMapping("/availability")
     public ResponseEntity<?> getAvailability(
             @RequestParam String resource,
@@ -96,8 +97,7 @@ public class BookingController {
         }
     }
 
-    // Feature 4: Export CSV endpoint
-    // GET /api/bookings/export/csv?status=ALL
+    // Feature 4a: Export CSV
     @GetMapping("/export/csv")
     public ResponseEntity<String> exportCsv(
             @AuthenticationPrincipal Object principal,
@@ -111,5 +111,25 @@ public class BookingController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bookings.csv\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(csv);
+    }
+
+    // Feature 4b: Export PDF
+    @GetMapping("/export/pdf")
+    public ResponseEntity<byte[]> exportPdf(
+            @AuthenticationPrincipal Object principal,
+            @RequestParam(defaultValue = "ALL") String status) {
+        User user = getUserFromPrincipal(principal);
+        if (!"ROLE_ADMIN".equals(user.getRole())) {
+            return ResponseEntity.status(403).build();
+        }
+        try {
+            byte[] pdf = bookingService.exportToPdf(status);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bookings.pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
