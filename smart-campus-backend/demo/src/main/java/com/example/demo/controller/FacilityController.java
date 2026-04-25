@@ -77,7 +77,7 @@ public class FacilityController {
     }
 
     @GetMapping("/{id}")
-  
+    public ResponseEntity<FacilityDto> getFacility(@PathVariable Long id) {
         return facilityRepository.findById(id).map(facility -> ResponseEntity.ok(toDto(facility))).orElse(ResponseEntity.notFound().build());
     }
 
