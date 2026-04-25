@@ -144,7 +144,7 @@ public class FacilityController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-   
+    private static Specification<Facility> buildSpecification(
             FacilityType type, Integer capacity, Integer minCapacity, String location, FacilityStatus status) {
         Specification<Facility> specification = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
 
