@@ -85,7 +85,7 @@ public class FacilityController {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<FacilityDto> updateFacility(@PathVariable Long id, @Valid @RequestBody UpdateFacilityDto dto) {
-      
+        try {
             validateAvailabilityWindows(dto.availabilityWindows());
         
             return ResponseEntity.badRequest().build();
