@@ -201,7 +201,7 @@ public class FacilityController {
         return windows;
     }
 
-  
+    private static FacilityDto toDto(Facility facility) {
         List<FacilityAvailabilityWindowDto> windows = new ArrayList<>();
         for (FacilityAvailabilityWindow window : facility.getAvailabilityWindows()) {
             windows.add(new FacilityAvailabilityWindowDto(window.getDayOfWeek(), window.getStartTime(), window.getEndTime()));
