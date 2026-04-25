@@ -184,7 +184,7 @@ public class FacilityController {
         facility.setStatus(status == null ? FacilityStatus.ACTIVE : status);
         facility.setAvailabilityWindows(mapWindows(availabilityWindows));
         facility.setUpdatedAt(LocalDateTime.now());
- 
+        if (facility.getCreatedAt() == null) {
             facility.setCreatedAt(LocalDateTime.now());
         }
     }
