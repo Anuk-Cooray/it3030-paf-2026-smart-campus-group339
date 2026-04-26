@@ -13,6 +13,7 @@ public record TicketDto(
                 String contactDetails,
                 List<String> attachments,
                 String status,
+                String assignedTechnician,
                 String userName,
                 LocalDateTime createdAt,
                 LocalDateTime updatedAt) {
