@@ -1,0 +1,384 @@
+{
+  "info": {
+    "name": "Smart Campus - Module A Facilities Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Automated API tests for Facilities & Assets Catalogue (Module A)."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "adminStudentId", "value": "ITADMIN01" },
+    { "key": "adminPassword", "value": "Admin@123" },
+    { "key": "studentStudentId", "value": "ITUSER001" },
+    { "key": "studentPassword", "value": "User@1234" },
+    { "key": "adminToken", "value": "" },
+    { "key": "studentToken", "value": "" },
+    { "key": "facilityId", "value": "" },
+    { "key": "facilityName", "value": "Automation Hall" },
+    { "key": "updatedFacilityName", "value": "Automation Hall Updated" }
+  ],
+  "item": [
+    {
+      "name": "1. Login Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"{{adminStudentId}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Admin login returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('Admin token exists', function () {",
+              "  pm.expect(json.token).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.test('Admin role is correct', function () {",
+              "  pm.expect(json.role).to.eql('ROLE_ADMIN');",
+              "});",
+              "pm.collectionVariables.set('adminToken', json.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Login Student",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"{{studentStudentId}}\",\n  \"password\": \"{{studentPassword}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Student login returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('Student token exists', function () {",
+              "  pm.expect(json.token).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.test('Student role is ROLE_USER', function () {",
+              "  pm.expect(json.role).to.eql('ROLE_USER');",
+              "});",
+              "pm.collectionVariables.set('studentToken', json.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Student - List Facilities (Allowed)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities?page=0&size=5",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "facilities"],
+          "query": [
+            { "key": "page", "value": "0" },
+            { "key": "size", "value": "5" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Student can list facilities', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('Response has pageable content array', function () {",
+              "  pm.expect(json).to.have.property('content');",
+              "  pm.expect(json.content).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Student - Create Facility (Forbidden)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "facilities"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Student Forbidden Facility\",\n  \"type\": \"LAB\",\n  \"capacity\": 20,\n  \"location\": \"Block A\",\n  \"status\": \"ACTIVE\",\n  \"availabilityWindows\": [\n    {\n      \"dayOfWeek\": \"MONDAY\",\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    }\n  ]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Student cannot create facilities', function () {",
+              "  pm.expect(pm.response.code).to.eql(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Admin - Create Facility",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const unique = Date.now();",
+              "pm.collectionVariables.set('facilityName', 'Automation Hall ' + unique);",
+              "pm.collectionVariables.set('updatedFacilityName', 'Automation Hall Updated ' + unique);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Admin create returns 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('Created facility has id', function () {",
+              "  pm.expect(json.id).to.exist;",
+              "});",
+              "pm.test('Created facility name matches', function () {",
+              "  pm.expect(json.name).to.eql(pm.collectionVariables.get('facilityName'));",
+              "});",
+              "pm.collectionVariables.set('facilityId', String(json.id));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "facilities"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{facilityName}}\",\n  \"type\": \"LECTURE_HALL\",\n  \"capacity\": 140,\n  \"location\": \"Main Building - L1\",\n  \"status\": \"ACTIVE\",\n  \"availabilityWindows\": [\n    {\n      \"dayOfWeek\": \"MONDAY\",\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"12:00:00\"\n    },\n    {\n      \"dayOfWeek\": \"TUESDAY\",\n      \"startTime\": \"13:00:00\",\n      \"endTime\": \"16:00:00\"\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "6. Admin - Filter Facilities",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities?status=ACTIVE&page=0&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "facilities"],
+          "query": [
+            { "key": "status", "value": "ACTIVE" },
+            { "key": "page", "value": "0" },
+            { "key": "size", "value": "10" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Filter returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('Filter response has content array', function () {",
+              "  pm.expect(json.content).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Admin - Get Facility By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities/{{facilityId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "facilities", "{{facilityId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Get by id returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('Id matches created facility', function () {",
+              "  pm.expect(String(json.id)).to.eql(pm.collectionVariables.get('facilityId'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Admin - Update Facility",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities/{{facilityId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "facilities", "{{facilityId}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{updatedFacilityName}}\",\n  \"type\": \"LECTURE_HALL\",\n  \"capacity\": 160,\n  \"location\": \"Main Building - L1 Updated\",\n  \"status\": \"ACTIVE\",\n  \"availabilityWindows\": [\n    {\n      \"dayOfWeek\": \"WEDNESDAY\",\n      \"startTime\": \"09:00:00\",\n      \"endTime\": \"12:00:00\"\n    }\n  ]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Update returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('Updated name is applied', function () {",
+              "  pm.expect(json.name).to.eql(pm.collectionVariables.get('updatedFacilityName'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Admin - Change Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities/{{facilityId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "facilities", "{{facilityId}}", "status"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"OUT_OF_SERVICE\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status patch returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('Status updated to OUT_OF_SERVICE', function () {",
+              "  pm.expect(json.status).to.eql('OUT_OF_SERVICE');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Admin - Delete Facility",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities/{{facilityId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "facilities", "{{facilityId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Delete returns 204', function () {",
+              "  pm.response.to.have.status(204);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

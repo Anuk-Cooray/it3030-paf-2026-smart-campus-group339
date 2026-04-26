@@ -1,11 +1,13 @@
 package com.example.demo.config;
 
+import com.example.demo.security.JwtAuthenticationFilter;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -17,12 +19,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
+        configuration.setAllowedOrigins(
+                List.of("http://localhost:5173", "http://localhost:5174"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -42,17 +46,25 @@ public class SecurityConfig {
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/google").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                .anyRequest().authenticated());
+        http.authorizeHttpRequests(
+                auth ->
+                        auth.requestMatchers(HttpMethod.OPTIONS, "/**")
+                                .permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/auth/google")
+                                .permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/auth/login")
+                                .permitAll()
+                                .anyRequest()
+                                .authenticated());
 
-        http.exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType("text/plain;charset=UTF-8");
-            response.getWriter().write("Unauthorized");
-        }));
+        http.exceptionHandling(
+                ex ->
+                        ex.authenticationEntryPoint(
+                                (request, response, authException) -> {
+                                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                                    response.setContentType("text/plain;charset=UTF-8");
+                                    response.getWriter().write("Unauthorized");
+                                }));
 
         return http.build();
     }
