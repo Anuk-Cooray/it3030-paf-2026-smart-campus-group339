@@ -28,6 +28,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/tickets" style={navLinkStyle}>
             Tickets
           </NavLink>
+          <NavLink to="/admin/notifications" style={navLinkStyle}>
+            Notifications
+          </NavLink>
         </nav>
       </aside>
 

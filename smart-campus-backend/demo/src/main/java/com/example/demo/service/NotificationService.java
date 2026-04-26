@@ -42,6 +42,10 @@ public class NotificationService {
             return;
         }
 
+        createAndBroadcast(user, message);
+    }
+
+    public Notification createAndBroadcast(User user, String message) {
         Notification notification = new Notification();
         notification.setUser(user);
         notification.setMessage(message);
@@ -50,6 +54,7 @@ public class NotificationService {
 
         Notification saved = notificationRepository.save(notification);
         messagingTemplate.convertAndSendToUser(user.getEmail(), "/queue/notifications", toDto(saved));
+        return saved;
     }
 
     private static NotificationDto toDto(Notification notification) {

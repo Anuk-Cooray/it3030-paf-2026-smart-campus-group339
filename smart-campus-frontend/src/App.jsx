@@ -14,6 +14,7 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import FacilitiesAdmin from './pages/admin/FacilitiesAdmin.jsx'
 import BookingsAdmin from './pages/admin/BookingsAdmin.jsx'
 import TicketsAdmin from './pages/admin/TicketsAdmin.jsx'
+import NotificationsAdmin from './pages/admin/NotificationsAdmin.jsx'
 
 
 
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="facilities" element={<FacilitiesAdmin />} />
           <Route path="bookings" element={<BookingsAdmin />} />
           <Route path="tickets" element={<TicketsAdmin />} />
+          <Route path="notifications" element={<NotificationsAdmin />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
