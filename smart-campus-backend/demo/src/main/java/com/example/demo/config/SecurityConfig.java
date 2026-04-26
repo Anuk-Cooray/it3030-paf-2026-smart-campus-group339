@@ -50,6 +50,8 @@ public class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers(HttpMethod.POST, "/api/auth/login")
                                 .permitAll()
+                                .requestMatchers("/ws/**")
+                                .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/facilities/**")
                                 .authenticated()
                                 .requestMatchers(HttpMethod.POST, "/api/facilities/**")

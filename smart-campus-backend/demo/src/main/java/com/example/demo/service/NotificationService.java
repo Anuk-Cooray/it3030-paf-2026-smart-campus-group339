@@ -1,10 +1,12 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.NotificationDto;
 import com.example.demo.model.Notification;
 import com.example.demo.model.User;
 import com.example.demo.repository.NotificationRepository;
 import com.example.demo.repository.UserRepository;
 import java.time.LocalDateTime;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,10 +14,15 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository) {
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            SimpMessagingTemplate messagingTemplate) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     public void sendNotification(String userId, String message) {
@@ -40,6 +47,15 @@ public class NotificationService {
         notification.setMessage(message);
         notification.setRead(false);
         notification.setCreatedAt(LocalDateTime.now());
-        notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        messagingTemplate.convertAndSendToUser(user.getEmail(), "/queue/notifications", toDto(saved));
+    }
+
+    private static NotificationDto toDto(Notification notification) {
+        return new NotificationDto(
+                notification.getId(),
+                notification.getMessage(),
+                notification.isRead(),
+                notification.getCreatedAt());
     }
 }

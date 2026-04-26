@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../AuthContext.jsx'
 
@@ -7,6 +9,12 @@ function notificationsBaseUrl() {
   if (!raw) return '/api/notifications'
   const base = String(raw).replace(/\/$/, '')
   return `${base}/api/notifications`
+}
+
+function websocketBaseUrl() {
+  const raw = import.meta.env.VITE_API_BASE_URL
+  const base = raw ? String(raw).replace(/\/$/, '') : 'http://localhost:8080'
+  return `${base}/ws`
 }
 
 export function NotificationBell() {
@@ -48,6 +56,45 @@ export function NotificationBell() {
   useEffect(() => {
     if (!token) return
     refresh()
+  }, [token])
+
+  useEffect(() => {
+    if (!token) return undefined
+
+    const client = new Client({
+      connectHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
+      reconnectDelay: 5000,
+      webSocketFactory: () => new SockJS(websocketBaseUrl()),
+      onConnect: () => {
+        client.subscribe('/user/queue/notifications', (message) => {
+          try {
+            const next = JSON.parse(message.body)
+            setItems((prev) => {
+              if (prev.some((item) => item.id === next.id)) {
+                return prev
+              }
+              return [next, ...prev]
+            })
+          } catch (e) {
+            setError(e?.message || String(e))
+          }
+        })
+      },
+      onStompError: (frame) => {
+        setError(frame.headers?.message || frame.body || 'Notification socket error')
+      },
+      onWebSocketError: () => {
+        setError('Notification socket connection failed')
+      },
+    })
+
+    client.activate()
+
+    return () => {
+      client.deactivate()
+    }
   }, [token])
 
   useEffect(() => {
