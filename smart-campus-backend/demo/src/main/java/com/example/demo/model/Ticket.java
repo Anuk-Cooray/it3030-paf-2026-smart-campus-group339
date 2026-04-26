@@ -59,6 +59,9 @@ public class Ticket {
     @Column(name = "status")
     private String status = "OPEN";
 
+    @Column(name = "assigned_technician")
+    private String assignedTechnician;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 

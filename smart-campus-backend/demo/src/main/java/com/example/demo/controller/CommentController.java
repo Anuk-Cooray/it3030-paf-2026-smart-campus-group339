@@ -4,7 +4,6 @@ import com.example.demo.model.Comment;
 import com.example.demo.model.User;
 import com.example.demo.repository.CommentRepository;
 import com.example.demo.repository.UserRepository;
-import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,7 +32,13 @@ public class CommentController {
     public ResponseEntity<?> addComment(
             Authentication authentication, @PathVariable Long ticketId, @RequestBody Map<String, String> payload) {
         User user = resolveUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
         String text = payload == null ? null : payload.get("text");
+        if (text == null) {
+            text = payload == null ? null : payload.get("message");
+        }
         if (text == null || text.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Comment text is required."));
         }
@@ -48,9 +52,12 @@ public class CommentController {
     }
 
     @GetMapping("/api/tickets/{ticketId}/comments")
-    public List<Comment> listComments(Authentication authentication, @PathVariable Long ticketId) {
-        resolveUser(authentication);
-        return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId);
+    public ResponseEntity<?> listComments(Authentication authentication, @PathVariable Long ticketId) {
+        User user = resolveUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId));
     }
 
     @DeleteMapping("/api/comments/{commentId}")
@@ -73,11 +80,11 @@ public class CommentController {
 
     private User resolveUser(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
-            throw new IllegalStateException("Not authenticated");
+            return null;
         }
         return userRepository
                 .findByEmail(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("User not found"));
+                .orElse(null);
     }
 
     private static boolean isAdmin(Authentication authentication) {

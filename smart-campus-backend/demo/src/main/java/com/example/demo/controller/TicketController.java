@@ -9,6 +9,8 @@ import com.example.demo.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -96,20 +98,63 @@ public class TicketController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PatchMapping("/{id}/status")
+    @RequestMapping(value = "/{id}/status", method = { org.springframework.web.bind.annotation.RequestMethod.PUT, org.springframework.web.bind.annotation.RequestMethod.PATCH })
     @Transactional
-    public ResponseEntity<TicketDto> updateTicketStatus(
+    public ResponseEntity<?> updateTicketStatus(
             Authentication authentication, @PathVariable Long id, @RequestBody StatusUpdateDto statusUpdate) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required for status update"));
+        }
+
+        // Check admin role from JWT authorities (set by JwtAuthenticationFilter)
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        // Also check from DB user if available
+        User user = resolveUser(authentication);
+        if (user != null) {
+            isAdmin = isAdmin || "ROLE_ADMIN".equals(user.getRole()) || "ADMIN".equals(user.getRole());
+        }
+
+        Optional<Ticket> ticketOpt;
+        if (isAdmin) {
+            ticketOpt = ticketRepository.findById(id);
+        } else if (user != null) {
+            ticketOpt = ticketRepository.findByIdAndUser(id, user);
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not found"));
+        }
+
+        if (ticketOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Ticket not found or access denied"));
+        }
+
+        Ticket ticket = ticketOpt.get();
+        ticket.setStatus(statusUpdate.status());
+        ticket.setUpdatedAt(LocalDateTime.now());
+        Ticket updated = ticketRepository.save(ticket);
+        return ResponseEntity.ok(toDto(updated));
+    }
+
+    @PatchMapping("/{id}/assign-technician")
+    @Transactional
+    public ResponseEntity<TicketDto> assignTechnician(
+            Authentication authentication, @PathVariable Long id, @RequestBody AssignTechnicianDto assignDto) {
         User user = resolveUser(authentication);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
+        boolean isAdmin = "ROLE_ADMIN".equals(user.getRole()) || "ADMIN".equals(user.getRole());
+        if (!isAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         return ticketRepository
-                .findByIdAndUser(id, user)
+                .findById(id)
                 .map(
                         ticket -> {
-                            ticket.setStatus(statusUpdate.status());
+                            ticket.setAssignedTechnician(assignDto.assignedTechnician());
                             ticket.setUpdatedAt(LocalDateTime.now());
                             Ticket updated = ticketRepository.save(ticket);
                             return ResponseEntity.ok(toDto(updated));
@@ -136,7 +181,7 @@ public class TicketController {
     }
 
     private User resolveUser(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (authentication == null) {
             return null;
         }
         String email = authentication.getName();
@@ -165,6 +210,7 @@ public class TicketController {
                 ticket.getContactDetails(),
                 attachments,
                 ticket.getStatus(),
+                ticket.getAssignedTechnician(),
                 ticket.getUser().getName(),
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt());
@@ -196,5 +242,8 @@ public class TicketController {
     }
 
     public record StatusUpdateDto(String status) {
+    }
+
+    public record AssignTechnicianDto(String assignedTechnician) {
     }
 }
