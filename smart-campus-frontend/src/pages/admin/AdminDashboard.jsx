@@ -24,7 +24,7 @@ export default function AdminDashboard() {
           http.get('/api/tickets', { headers }),
         ])
         if (!mounted) return
-        setFacilities(Array.isArray(facRes.data) ? facRes.data : [])
+        setFacilities(Array.isArray(facRes.data?.content) ? facRes.data.content : [])
         setBookings(Array.isArray(bookingRes.data) ? bookingRes.data : [])
         setTickets(Array.isArray(ticketRes.data) ? ticketRes.data : [])
       } catch (e) {

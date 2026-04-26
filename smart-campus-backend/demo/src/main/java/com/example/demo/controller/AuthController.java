@@ -26,14 +26,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" })
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class AuthController {
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
 
-    private static final String CLIENT_ID = "291429509751-oofn0bvctjl4c343kc3vudi7gtq5isep.apps.googleusercontent.com";
+    private static final String CLIENT_ID =
+            "291429509751-oofn0bvctjl4c343kc3vudi7gtq5isep.apps.googleusercontent.com";
 
     public AuthController(UserRepository userRepository, JwtService jwtService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -44,10 +45,10 @@ public class AuthController {
     @PostMapping(value = "/google", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AuthResponseDto> authenticateGoogleUser(@RequestBody TokenDto tokenDto) {
         try {
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
-                    new GsonFactory())
-                    .setAudience(Collections.singletonList(CLIENT_ID))
-                    .build();
+            GoogleIdTokenVerifier verifier =
+                    new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                            .setAudience(Collections.singletonList(CLIENT_ID))
+                            .build();
 
             GoogleIdToken idToken = verifier.verify(tokenDto.getToken());
 
