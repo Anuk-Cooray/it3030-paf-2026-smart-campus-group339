@@ -215,6 +215,17 @@ export default function TicketsAdmin() {
 
   // --- Render Helpers ---
 
+  const getStatusStyle = (status) => {
+    const map = {
+      OPEN: { backgroundColor: '#eff6ff', color: '#1e40af' },
+      IN_PROGRESS: { backgroundColor: '#fffbeb', color: '#b45309' },
+      RESOLVED: { backgroundColor: '#f0fdf4', color: '#15803d' },
+      CLOSED: { backgroundColor: '#f8fafc', color: '#475569' },
+      REJECTED: { backgroundColor: '#fef2f2', color: '#b91c1c' },
+    }
+    return map[status] || map.OPEN
+  }
+
   const renderModal = (title, isOpen, onClose, content) => {
     if (!isOpen) return null
     return (
@@ -230,6 +241,22 @@ export default function TicketsAdmin() {
     )
   }
 
+  // --- Stats Calculation ---
+  const stats = useMemo(() => {
+    const total = tickets.length
+    const open = tickets.filter(t => t.status === 'OPEN').length
+    const inProgress = tickets.filter(t => t.status === 'IN_PROGRESS').length
+    const resolved = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length
+    return { total, open, inProgress, resolved }
+  }, [tickets])
+
+  const renderStatCard = (label, value, color) => (
+    <div style={{ ...styles.statCard, borderLeft: `4px solid ${color}` }}>
+      <div style={styles.statLabel}>{label}</div>
+      <div style={{ ...styles.statValue, color }}>{value}</div>
+    </div>
+  )
+
   return (
     <div style={styles.container}>
       <header style={styles.header}>
@@ -237,10 +264,25 @@ export default function TicketsAdmin() {
           <h1 style={styles.title}>Admin Ticket Management</h1>
           <p style={styles.subtitle}>Overview of all maintenance requests across the campus.</p>
         </div>
-        <button onClick={loadTickets} disabled={loading} style={styles.refreshBtn}>
+        <button 
+          onClick={loadTickets} 
+          disabled={loading} 
+          style={{
+            ...styles.refreshBtn,
+            opacity: loading ? 0.7 : 1,
+            transform: loading ? 'scale(0.98)' : 'scale(1)'
+          }}
+        >
           {loading ? 'Refreshing...' : 'Refresh Data'}
         </button>
       </header>
+
+      <div style={styles.statsRow}>
+        {renderStatCard("Total Tickets", stats.total, "#6366f1")}
+        {renderStatCard("Open", stats.open, "#3b82f6")}
+        {renderStatCard("In Progress", stats.inProgress, "#f59e0b")}
+        {renderStatCard("Resolved/Closed", stats.resolved, "#10b981")}
+      </div>
 
       {error && <div style={styles.errorBanner}>{error}</div>}
 
@@ -309,7 +351,7 @@ export default function TicketsAdmin() {
                     disabled={submitting || t.status === 'REJECTED'}
                     style={{
                       ...styles.statusSelect,
-                      borderColor: t.status === 'REJECTED' ? '#ef4444' : '#e2e8f0'
+                      ...getStatusStyle(t.status),
                     }}
                   >
                     {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -317,17 +359,33 @@ export default function TicketsAdmin() {
                 </td>
                 <td style={styles.td}>
                   <div style={styles.techCell}>
-                    {localAssignments[t.id] ? (
-                      <span style={styles.techName}>{localAssignments[t.id]}</span>
-                    ) : (
-                      <span style={styles.unassigned}>Unassigned</span>
-                    )}
+                    <div style={{
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      backgroundColor: '#f1f5f9', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#64748b'
+                    }}>
+                      {localAssignments[t.id] ? localAssignments[t.id].charAt(0) : '?'}
+                    </div>
+                    <div>
+                      {localAssignments[t.id] ? (
+                        <span style={styles.techName}>{localAssignments[t.id]}</span>
+                      ) : (
+                        <span style={styles.unassigned}>Unassigned</span>
+                      )}
+                    </div>
                     <button 
                       onClick={() => { setActiveTicket(t); setShowAssignModal(true); }}
                       style={styles.iconBtn}
                       title="Assign Technician"
                     >
-                      ✎
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                     </button>
                   </div>
                 </td>
@@ -351,8 +409,9 @@ export default function TicketsAdmin() {
                     <button 
                       onClick={() => { setActiveTicket(t); setRejectReason(''); setShowRejectModal(true); }}
                       disabled={t.status === 'REJECTED'}
-                      style={{...styles.actionBtn, ...styles.rejectBtn}}
+                      style={{...styles.actionBtn, ...styles.rejectBtn, opacity: t.status === 'REJECTED' ? 0.5 : 1}}
                     >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
                       Reject
                     </button>
                   </div>
@@ -403,9 +462,14 @@ export default function TicketsAdmin() {
           <button 
             onClick={handleAssignTechnician} 
             disabled={!selectedTech}
-            style={styles.primaryBtn}
+            style={{
+              ...styles.primaryBtn,
+              opacity: !selectedTech ? 0.6 : 1,
+              width: '100%',
+              marginTop: '12px'
+            }}
           >
-            Assign Technician
+            Confirm Assignment
           </button>
         </div>
       ))}
@@ -436,9 +500,12 @@ export default function TicketsAdmin() {
             <button 
               onClick={handleAddComment} 
               disabled={submitting || !newComment.trim()}
-              style={styles.primaryBtn}
+              style={{
+                ...styles.primaryBtn,
+                opacity: submitting || !newComment.trim() ? 0.6 : 1
+              }}
             >
-              {submitting ? 'Adding...' : 'Add Comment'}
+              {submitting ? 'Adding...' : 'Post Comment'}
             </button>
           </div>
         </div>
@@ -473,208 +540,296 @@ export default function TicketsAdmin() {
 
 const styles = {
   container: {
-    padding: '24px',
-    maxWidth: '1400px',
+    padding: '40px 24px',
+    maxWidth: '1440px',
     margin: '0 auto',
     fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
-    color: '#1e293b'
+    color: '#334155',
+    backgroundColor: '#f8fafc',
+    minHeight: '100vh'
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '32px'
+    alignItems: 'center',
+    marginBottom: '40px'
   },
   title: {
-    fontSize: '28px',
-    fontWeight: '800',
+    fontSize: '32px',
+    fontWeight: '850',
     margin: 0,
-    letterSpacing: '-0.02em',
-    color: '#0f172a'
+    letterSpacing: '-0.04em',
+    color: '#0f172a',
+    background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent'
   },
   subtitle: {
     color: '#64748b',
-    marginTop: '4px',
-    fontSize: '15px'
+    marginTop: '6px',
+    fontSize: '16px',
+    fontWeight: '500'
   },
   refreshBtn: {
-    padding: '10px 20px',
+    padding: '12px 24px',
     backgroundColor: '#fff',
     border: '1px solid #e2e8f0',
-    borderRadius: '8px',
+    borderRadius: '12px',
     fontSize: '14px',
     fontWeight: '600',
+    color: '#0f172a',
     cursor: 'pointer',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-    transition: 'all 0.2s'
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  statsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '24px',
+    marginBottom: '40px'
+  },
+  statCard: {
+    backgroundColor: '#fff',
+    padding: '24px',
+    borderRadius: '16px',
+    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+    transition: 'transform 0.2s ease',
+    cursor: 'default'
+  },
+  statLabel: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '8px'
+  },
+  statValue: {
+    fontSize: '36px',
+    fontWeight: '800',
+    letterSpacing: '-0.02em'
   },
   errorBanner: {
-    padding: '12px 16px',
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fee2e2',
-    borderRadius: '8px',
-    color: '#991b1b',
-    marginBottom: '24px',
-    fontSize: '14px'
+    padding: '16px 20px',
+    backgroundColor: '#fff1f2',
+    border: '1px solid #fda4af',
+    borderRadius: '12px',
+    color: '#9f1239',
+    marginBottom: '32px',
+    fontSize: '14px',
+    fontWeight: '500',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
   },
   toolbar: {
     display: 'flex',
-    gap: '16px',
-    marginBottom: '24px',
-    flexWrap: 'wrap'
+    gap: '20px',
+    marginBottom: '32px',
+    flexWrap: 'wrap',
+    alignItems: 'center'
   },
   searchBox: {
-    flex: 1,
-    minWidth: '300px'
+    flex: 2,
+    minWidth: '300px',
+    position: 'relative'
   },
   searchInput: {
     width: '100%',
-    padding: '10px 16px',
-    borderRadius: '8px',
+    padding: '14px 20px',
+    paddingLeft: '44px',
+    borderRadius: '14px',
     border: '1px solid #e2e8f0',
-    fontSize: '14px',
+    fontSize: '15px',
+    backgroundColor: '#fff',
+    color: '#1e293b',
     outline: 'none',
-    transition: 'border-color 0.2s'
+    transition: 'all 0.2s ease',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: '16px center',
+    backgroundSize: '20px'
   },
   filterGroup: {
     display: 'flex',
-    gap: '12px'
+    gap: '12px',
+    flex: 1,
+    justifyContent: 'flex-end'
   },
   select: {
-    padding: '10px 16px',
-    borderRadius: '8px',
+    padding: '12px 16px',
+    borderRadius: '12px',
     border: '1px solid #e2e8f0',
     fontSize: '14px',
+    fontWeight: '500',
     backgroundColor: '#fff',
+    color: '#475569',
     cursor: 'pointer',
-    minWidth: '160px'
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    minWidth: '160px',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 12px center',
+    backgroundSize: '16px',
+    paddingRight: '40px'
   },
   tableCard: {
     backgroundColor: '#fff',
-    borderRadius: '12px',
+    borderRadius: '20px',
     border: '1px solid #e2e8f0',
     overflow: 'hidden',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)'
   },
   table: {
     width: '100%',
-    borderCollapse: 'collapse',
+    borderCollapse: 'separate',
+    borderSpacing: 0,
     textAlign: 'left'
   },
   th: {
-    padding: '16px',
+    padding: '20px 24px',
     backgroundColor: '#f8fafc',
     fontSize: '12px',
     fontWeight: '700',
     color: '#64748b',
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    borderBottom: '1px solid #e2e8f0'
+    letterSpacing: '0.1em',
+    borderBottom: '2px solid #f1f5f9',
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    backdropFilter: 'blur(8px)'
   },
   tr: {
-    borderBottom: '1px solid #f1f5f9',
-    transition: 'background-color 0.1s'
+    transition: 'all 0.2s ease'
   },
   td: {
-    padding: '16px',
+    padding: '20px 24px',
     fontSize: '14px',
+    borderBottom: '1px solid #f1f5f9',
     verticalAlign: 'middle'
   },
   primaryText: {
-    fontWeight: '600',
-    color: '#0f172a'
+    fontWeight: '700',
+    color: '#0f172a',
+    fontSize: '15px'
   },
   secondaryText: {
-    fontSize: '12px',
+    fontSize: '13px',
     color: '#64748b',
-    marginTop: '2px'
+    marginTop: '4px',
+    fontWeight: '500'
   },
   descriptionText: {
-    maxWidth: '250px',
+    maxWidth: '300px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    color: '#475569'
+    color: '#475569',
+    lineHeight: '1.5'
   },
   statusSelect: {
-    padding: '6px 10px',
-    borderRadius: '6px',
-    border: '1px solid #e2e8f0',
+    padding: '8px 12px',
+    borderRadius: '10px',
     fontSize: '12px',
-    fontWeight: '600',
-    cursor: 'pointer'
+    fontWeight: '700',
+    cursor: 'pointer',
+    border: '1px solid transparent',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
   },
   techCell: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '12px'
   },
   techName: {
-    color: '#0f172a',
-    fontWeight: '500'
+    color: '#1e293b',
+    fontWeight: '600'
   },
   unassigned: {
     color: '#94a3b8',
-    fontStyle: 'italic'
+    fontStyle: 'italic',
+    fontSize: '13px'
   },
   iconBtn: {
-    background: 'none',
+    background: '#f1f5f9',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '14px',
     color: '#6366f1',
-    padding: '4px',
-    borderRadius: '4px',
-    transition: 'background 0.2s'
+    padding: '8px',
+    borderRadius: '10px',
+    transition: 'all 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   commentCell: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px'
+    gap: '6px'
   },
   latestComment: {
     fontSize: '13px',
-    color: '#64748b',
-    maxWidth: '200px',
+    color: '#475569',
+    maxWidth: '220px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap',
+    fontStyle: 'italic',
+    padding: '4px 8px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '6px'
   },
   textBtn: {
     background: 'none',
     border: 'none',
-    color: '#3b82f6',
+    color: '#6366f1',
     padding: 0,
-    fontSize: '12px',
-    fontWeight: '600',
+    fontSize: '13px',
+    fontWeight: '700',
     cursor: 'pointer',
     textAlign: 'left',
-    textDecoration: 'underline'
+    transition: 'color 0.2s ease'
   },
   actions: {
     display: 'flex',
-    gap: '8px'
+    gap: '12px'
   },
   actionBtn: {
-    padding: '6px 12px',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600',
+    padding: '10px 16px',
+    borderRadius: '12px',
+    fontSize: '13px',
+    fontWeight: '700',
     cursor: 'pointer',
-    border: '1px solid transparent'
+    border: '1px solid transparent',
+    transition: 'all 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
   },
   rejectBtn: {
-    backgroundColor: '#fee2e2',
-    color: '#991b1b',
-    '&:hover': {
-      backgroundColor: '#fecaca'
-    }
+    backgroundColor: '#fff1f2',
+    color: '#e11d48',
+    transition: 'all 0.2s ease'
   },
   emptyState: {
-    padding: '48px',
+    padding: '80px 40px',
     textAlign: 'center',
     color: '#94a3b8',
-    fontSize: '15px'
+    fontSize: '16px',
+    fontWeight: '500'
   },
   modalOverlay: {
     position: 'fixed',
@@ -682,153 +837,184 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    backdropFilter: 'blur(4px)'
+    backdropFilter: 'blur(12px)'
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: '16px',
-    width: '100%',
-    maxWidth: '500px',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    borderRadius: '24px',
+    width: '90%',
+    maxWidth: '560px',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
     overflow: 'hidden'
   },
   modalHeader: {
-    padding: '20px 24px',
+    padding: '24px 32px',
     borderBottom: '1px solid #f1f5f9',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    backgroundColor: '#fff'
   },
   modalTitle: {
     margin: 0,
-    fontSize: '18px',
-    fontWeight: '700'
+    fontSize: '22px',
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: '-0.02em'
   },
   closeBtn: {
-    background: 'none',
+    background: '#f8fafc',
     border: 'none',
-    fontSize: '24px',
+    fontSize: '20px',
     cursor: 'pointer',
-    color: '#94a3b8'
+    color: '#64748b',
+    width: '36px',
+    height: '36px',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
   },
   modalBody: {
-    padding: '24px'
+    padding: '32px'
   },
   modalFields: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px'
+    gap: '24px'
   },
   field: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px'
+    gap: '10px'
   },
   label: {
     fontSize: '14px',
-    fontWeight: '600',
-    color: '#475569'
+    fontWeight: '700',
+    color: '#475569',
+    letterSpacing: '0.02em'
   },
   input: {
-    padding: '10px 12px',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    fontSize: '14px'
+    padding: '14px 16px',
+    borderRadius: '14px',
+    border: '2px solid #f1f5f9',
+    fontSize: '15px',
+    color: '#1e293b',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    backgroundColor: '#f8fafc'
   },
   textarea: {
     width: '100%',
-    minHeight: '100px',
-    padding: '12px',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    fontSize: '14px',
-    resize: 'vertical'
+    minHeight: '140px',
+    padding: '16px',
+    borderRadius: '16px',
+    border: '2px solid #f1f5f9',
+    fontSize: '15px',
+    color: '#1e293b',
+    outline: 'none',
+    resize: 'vertical',
+    transition: 'all 0.2s ease',
+    backgroundColor: '#f8fafc'
   },
   primaryBtn: {
-    padding: '12px',
+    padding: '14px 24px',
     backgroundColor: '#0f172a',
     color: '#fff',
     border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: '14px',
+    fontSize: '15px',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'opacity 0.2s'
+    transition: 'all 0.2s ease',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px'
   },
   secondaryBtn: {
-    padding: '12px',
+    padding: '14px 24px',
     backgroundColor: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer'
+    border: '2px solid #f1f5f9',
+    borderRadius: '14px',
+    fontSize: '15px',
+    fontWeight: '700',
+    color: '#475569',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
   },
   modalActions: {
     display: 'flex',
     justifyContent: 'flex-end',
-    gap: '12px',
-    marginTop: '8px'
+    gap: '16px',
+    marginTop: '12px'
   },
   modalWarning: {
-    fontSize: '14px',
+    fontSize: '15px',
     color: '#64748b',
-    margin: 0
+    margin: 0,
+    lineHeight: '1.6'
   },
   commentModal: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px'
+    gap: '24px'
   },
   commentList: {
-    maxHeight: '300px',
+    maxHeight: '350px',
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
-    paddingRight: '4px'
+    gap: '16px',
+    paddingRight: '8px'
   },
   commentItem: {
-    padding: '12px',
+    padding: '16px',
     backgroundColor: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px solid #f1f5f9'
+    borderRadius: '18px',
+    border: '1px solid #f1f5f9',
+    transition: 'transform 0.2s ease'
   },
   commentHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    marginBottom: '6px'
+    alignItems: 'center',
+    marginBottom: '8px'
   },
   commentAuthor: {
-    fontSize: '12px',
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: '13px',
     color: '#0f172a'
   },
   commentDate: {
     fontSize: '11px',
+    fontWeight: '600',
     color: '#94a3b8'
   },
   commentContent: {
-    fontSize: '13px',
-    lineHeight: '1.5',
-    color: '#475569'
+    fontSize: '14px',
+    color: '#334155',
+    lineHeight: '1.6'
   },
   noComments: {
     textAlign: 'center',
+    padding: '40px',
     color: '#94a3b8',
-    fontSize: '14px',
-    padding: '24px 0'
+    fontSize: '15px',
+    fontStyle: 'italic'
   },
   addCommentBox: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
-    borderTop: '1px solid #f1f5f9',
-    paddingTop: '20px'
+    gap: '16px',
+    paddingTop: '20px',
+    borderTop: '1px solid #f1f5f9'
   }
 }
