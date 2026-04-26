@@ -1,15 +1,8 @@
-import axios from 'axios'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../AuthContext.jsx'
-
-function notificationsBaseUrl() {
-  const raw = import.meta.env.VITE_API_BASE_URL
-  if (!raw) return '/api/notifications'
-  const base = String(raw).replace(/\/$/, '')
-  return `${base}/api/notifications`
-}
+import { http } from '../api/http.js'
 
 function websocketBaseUrl() {
   const raw = import.meta.env.VITE_API_BASE_URL
@@ -28,27 +21,24 @@ export function NotificationBell() {
   const tokenRef = useRef(token)
   tokenRef.current = token
 
-  const notificationsApi = useMemo(() => {
-    const client = axios.create({ baseURL: notificationsBaseUrl() })
-    client.interceptors.request.use((config) => {
-      const t = tokenRef.current
-      if (t) config.headers.Authorization = `Bearer ${t}`
-      return config
-    })
-    return client
-  }, [])
-
   const unreadCount = useMemo(() => items.filter((n) => !n.read).length, [items])
+
+  function notificationError(e) {
+    if (e?.response?.status === 401) {
+      return 'Session expired. Please log out and log in again.'
+    }
+    return e?.response?.data?.error || e?.response?.data || e?.message || String(e)
+  }
 
   async function refresh() {
     if (!tokenRef.current) return   // no token yet — skip silently
     setError(null)
     setLoading(true)
     try {
-      const res = await notificationsApi.get('/')
+      const res = await http.get('/api/notifications')
       setItems(Array.isArray(res.data) ? res.data : [])
     } catch (e) {
-      setError(e?.response?.data || e?.message || String(e))
+      setError(notificationError(e))
     } finally {
       setLoading(false)
     }
@@ -112,20 +102,20 @@ export function NotificationBell() {
   async function markRead(id) {
     setError(null)
     try {
-      await notificationsApi.patch(`/${id}/read`)
+      await http.patch(`/api/notifications/${id}/read`)
       setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
     } catch (e) {
-      setError(e?.response?.data || e?.message || String(e))
+      setError(notificationError(e))
     }
   }
 
   async function remove(id) {
     setError(null)
     try {
-      await notificationsApi.delete(`/${id}`)
+      await http.delete(`/api/notifications/${id}`)
       setItems((prev) => prev.filter((n) => n.id !== id))
     } catch (e) {
-      setError(e?.response?.data || e?.message || String(e))
+      setError(notificationError(e))
     }
   }
 
