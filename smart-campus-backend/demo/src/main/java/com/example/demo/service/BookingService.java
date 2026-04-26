@@ -2,10 +2,8 @@ package com.example.demo.service;
 
 import com.example.demo.dto.BookingRequest;
 import com.example.demo.model.Booking;
-import com.example.demo.model.Notification;
 import com.example.demo.model.User;
 import com.example.demo.repository.BookingRepository;
-import com.example.demo.repository.NotificationRepository;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +25,7 @@ import java.util.Map;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
-    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
 
     public List<Booking> getBookingsForUser(User user, String status) {
         List<Booking> bookings;
@@ -89,11 +87,10 @@ public class BookingService {
             }
             booking.setStatus(status);
 
-            Notification notification = new Notification();
-            notification.setUser(booking.getUser());
-            notification.setMessage("Your booking for " + booking.getResourceName() + " on "
-                    + booking.getBookingDate() + " has been " + status + ".");
-            notificationRepository.save(notification);
+            notificationService.sendNotification(
+                    String.valueOf(booking.getUser().getId()),
+                    "Your booking for " + booking.getResourceName() + " on "
+                            + booking.getBookingDate() + " has been " + status + ".");
 
         } else if ("CANCELLED".equals(status)) {
             if (!"ROLE_ADMIN".equals(user.getRole()) && !booking.getUser().getId().equals(user.getId())) {
