@@ -36,10 +36,9 @@ const pageContainer = {
 }
 
 const headerCard = {
-  background:
-    'linear-gradient(128deg, rgba(8, 47, 73, 0.98) 0%, rgba(15, 23, 42, 0.97) 38%, rgba(30, 58, 138, 0.96) 72%, rgba(37, 99, 235, 0.95) 100%)',
+  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
   backgroundImage:
-    'radial-gradient(circle at 12% 18%, rgba(125, 211, 252, 0.28) 0%, rgba(125, 211, 252, 0) 36%), radial-gradient(circle at 82% 78%, rgba(147, 197, 253, 0.22) 0%, rgba(147, 197, 253, 0) 40%), linear-gradient(128deg, rgba(8, 47, 73, 0.98) 0%, rgba(15, 23, 42, 0.97) 38%, rgba(30, 58, 138, 0.96) 72%, rgba(37, 99, 235, 0.95) 100%)',
+    'radial-gradient(circle at 12% 18%, rgba(199, 210, 254, 0.3) 0%, rgba(199, 210, 254, 0) 36%), radial-gradient(circle at 82% 78%, rgba(221, 214, 254, 0.24) 0%, rgba(221, 214, 254, 0) 40%), linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
   color: 'white',
   borderRadius: 16,
   padding: 40,
@@ -65,7 +64,7 @@ const headerGlowOne = {
   borderRadius: '50%',
   top: -170,
   left: -80,
-  background: 'rgba(125, 211, 252, 0.34)',
+  background: 'rgba(199, 210, 254, 0.36)',
   filter: 'blur(64px)',
   zIndex: 0,
 }
@@ -77,7 +76,7 @@ const headerGlowTwo = {
   borderRadius: '50%',
   bottom: -160,
   right: -30,
-  background: 'rgba(96, 165, 250, 0.32)',
+  background: 'rgba(196, 181, 253, 0.34)',
   filter: 'blur(58px)',
   zIndex: 0,
 }
@@ -89,7 +88,7 @@ const headerGlowThree = {
   borderRadius: '50%',
   top: 40,
   right: 240,
-  background: 'rgba(191, 219, 254, 0.22)',
+  background: 'rgba(233, 213, 255, 0.25)',
   filter: 'blur(52px)',
   zIndex: 0,
 }

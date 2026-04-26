@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../AuthContext'
 
 const INITIAL_FORM_DATA = {
@@ -36,11 +36,80 @@ export default function TicketForm({ onTicketCreated }) {
   const [message, setMessage] = useState(null)
   const [focused, setFocused] = useState(null)
   const [attachmentError, setAttachmentError] = useState('')
+  const [resources, setResources] = useState([])
+  const [resourcesLoading, setResourcesLoading] = useState(false)
+  const [resourcesError, setResourcesError] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const loadResources = async () => {
+      if (!authToken) {
+        setResources([])
+        return
+      }
+
+      setResourcesLoading(true)
+      setResourcesError('')
+
+      try {
+        const response = await fetch('http://localhost:8080/api/facilities?status=ACTIVE&size=200', {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          const errorBody = await response.text()
+          throw new Error(errorBody || `Failed to fetch resources (${response.status})`)
+        }
+
+        const data = await response.json()
+        const facilities = Array.isArray(data?.content) ? data.content : []
+
+        setResources(
+          facilities
+            .filter((item) => item?.name && item?.location)
+            .map((item) => ({
+              id: item.id,
+              name: item.name,
+              location: item.location,
+            })),
+        )
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setResourcesError(err.message || 'Failed to load resources')
+        }
+      } finally {
+        setResourcesLoading(false)
+      }
+    }
+
+    loadResources()
+
+    return () => controller.abort()
+  }, [authToken])
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
+
+  const handleResourceSelect = (e) => {
+    const selectedId = e.target.value
+    const selectedResource = resources.find((item) => String(item.id) === selectedId)
+
+    setFormData((prev) => ({
+      ...prev,
+      resource: selectedResource?.name || '',
+      location: selectedResource?.location || '',
+    }))
+  }
+
+  const selectedResourceId = resources.find(
+    (item) => item.name === formData.resource && item.location === formData.location,
+  )?.id
 
   const handleFocus = (fieldName) => {
     setFocused(fieldName)
@@ -182,23 +251,59 @@ export default function TicketForm({ onTicketCreated }) {
         </div>
       )}
 
+      {resourcesError && (
+        <div
+          style={{
+            ...styles.alert,
+            backgroundColor: '#fee2e2',
+            borderLeft: '4px solid #ef4444',
+            color: '#991b1b',
+          }}
+        >
+          Error loading resources: {resourcesError}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.section}>
           <h4 style={styles.sectionTitle}>Location Details</h4>
 
           <div style={styles.formGroup}>
             <label style={styles.label}>Resource or Equipment <span style={styles.required}>*</span></label>
-            <input
-              type="text"
-              name="resource"
-              value={formData.resource}
-              onChange={handleChange}
-              onFocus={() => handleFocus('resource')}
-              onBlur={handleBlur}
-              placeholder="Air Conditioner, Water Pump, Door Lock"
-              required
-              style={fieldStyle('resource', styles.input)}
-            />
+            {resources.length > 0 ? (
+              <select
+                name="resourceSelect"
+                value={selectedResourceId ? String(selectedResourceId) : ''}
+                onChange={handleResourceSelect}
+                onFocus={() => handleFocus('resource')}
+                onBlur={handleBlur}
+                required
+                disabled={resourcesLoading}
+                style={fieldStyle('resource', styles.selectCompact)}
+              >
+                <option value="">{resourcesLoading ? 'Loading resources...' : 'Select a resource'}</option>
+                {resources.map((item) => (
+                  <option key={item.id} value={String(item.id)}>
+                    {item.name} - {item.location}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                name="resource"
+                value={formData.resource}
+                onChange={handleChange}
+                onFocus={() => handleFocus('resource')}
+                onBlur={handleBlur}
+                placeholder={resourcesLoading ? 'Loading resources...' : 'Type resource manually'}
+                required
+                style={fieldStyle('resource', styles.input)}
+              />
+            )}
+            {resources.length === 0 && !resourcesLoading && !resourcesError && (
+              <small style={styles.helperText}>No resources available. You can type resource details manually.</small>
+            )}
           </div>
 
           <div style={styles.formGroup}>
@@ -340,7 +445,7 @@ export default function TicketForm({ onTicketCreated }) {
         <div style={styles.buttonGroup}>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || resourcesLoading}
             style={{
               ...styles.button,
               opacity: loading ? 0.75 : 1,
@@ -357,28 +462,28 @@ export default function TicketForm({ onTicketCreated }) {
 
 const styles = {
   container: {
-    background: '#f8fbff',
-    border: '1px solid #dbe7ff',
+    background: 'rgba(255,255,255,0.8)',
+    border: '1px solid rgba(255,255,255,0.3)',
     borderRadius: 16,
     marginBottom: 24,
     overflow: 'hidden',
-    boxShadow: '0 10px 26px rgba(15, 23, 42, 0.12)',
+    boxShadow: '0 20px 40px -15px rgba(0,0,0,0.05)',
+    backdropFilter: 'blur(12px)',
   },
   headerSection: {
-    background:
-      'linear-gradient(132deg, rgba(15, 23, 42, 0.99) 0%, rgba(30, 64, 175, 0.96) 62%, rgba(37, 99, 235, 0.93) 100%)',
+    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
     color: '#ffffff',
     padding: '18px 22px',
-    borderBottom: '1px solid rgba(147, 197, 253, 0.35)',
+    borderBottom: '1px solid rgba(255,255,255,0.2)',
   },
   headerBadge: {
     display: 'inline-block',
     fontSize: 11,
     letterSpacing: '0.7px',
     textTransform: 'uppercase',
-    background: 'rgba(191, 219, 254, 0.16)',
-    color: '#bfdbfe',
-    border: '1px solid rgba(191, 219, 254, 0.36)',
+    background: 'rgba(255,255,255,0.18)',
+    color: '#e0e7ff',
+    border: '1px solid rgba(255,255,255,0.3)',
     borderRadius: 999,
     padding: '4px 10px',
     marginBottom: 10,
@@ -394,7 +499,7 @@ const styles = {
     margin: 0,
     fontSize: 13,
     lineHeight: 1.45,
-    color: '#dbeafe',
+    color: '#e5e7eb',
   },
   alert: {
     margin: '16px 20px 0 20px',
@@ -411,14 +516,14 @@ const styles = {
     backgroundColor: '#ffffff',
   },
   section: {
-    backgroundColor: '#f8fbff',
-    border: '1px solid #dbeafe',
+    backgroundColor: '#f9fafb',
+    border: '1px solid #e5e7eb',
     borderRadius: 12,
     padding: 16,
   },
   sectionTitle: {
     margin: '0 0 12px 0',
-    color: '#1e3a8a',
+    color: '#111827',
     fontSize: 14,
     fontWeight: 700,
     letterSpacing: '0.2px',
@@ -576,13 +681,13 @@ const styles = {
   button: {
     border: 'none',
     borderRadius: 10,
-    background: 'linear-gradient(135deg, #0f172a 0%, #1d4ed8 65%, #2563eb 100%)',
+    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
     color: '#ffffff',
     fontSize: 14,
     fontWeight: 700,
     padding: '11px 22px',
     minWidth: 160,
-    boxShadow: '0 7px 18px rgba(15, 23, 42, 0.35)',
+    boxShadow: '0 10px 20px -10px rgba(124, 58, 237, 0.65)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease',
   },
 }
